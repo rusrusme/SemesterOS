@@ -17,18 +17,15 @@ tailwind.config = {
 const DEFAULT_MODULES = [
     { id: 'analysis', name: 'Analysis', ects: 8, targetWeekly: 11.0, color: '#3b82f6' },
     { id: 'gdb', name: 'GDB (Datenbanken)', ects: 6, targetWeekly: 8.5, color: '#10b981' },
-    { id: 'gbs', name: 'GBS (Betriebssysteme)', ects: 5, targetWeekly: 7.0, color: '#f59e0b' },
-    { id: 'security', name: 'IT-Security', ects: 5, targetWeekly: 6.5, color: '#ec4899' },
-    { id: 'signal', name: 'Signaltheorie', ects: 5, targetWeekly: 9.0, color: '#8b5cf6' }
+    { id: 'gbs', name: 'GBS (Betriebssysteme)', ects: 5, targetWeekly: 7.0, color: '#f59e0b' }
 ];
 
 // --- GLOBAL STATE ---
 let state = {
+    currentUser: localStorage.getItem('studytrack_current_user') || null,
     config: {
         semesterName: "SemesterOS",
-        creditTarget: 30,
-        weeksLecturePhase: 15,
-        weeksExamPhase: 6
+        creditTarget: 30
     },
     modules: [],
     sessions: [],
@@ -41,11 +38,16 @@ let state = {
     timerInterval: null
 };
 
-// --- LOCAL STORAGE LOGIC ---
+// --- LOCAL STORAGE LOGIC WITH USER SCOPE ---
 function loadState() {
-    const savedConfig = localStorage.getItem('studytrack_config');
-    const savedModules = localStorage.getItem('studytrack_modules');
-    const savedSessions = localStorage.getItem('studytrack_sessions');
+    state.currentUser = localStorage.getItem('studytrack_current_user');
+    if (!state.currentUser) return;
+
+    const userPrefix = `studytrack_${state.currentUser}_`;
+
+    const savedConfig = localStorage.getItem(userPrefix + 'config');
+    const savedModules = localStorage.getItem(userPrefix + 'modules');
+    const savedSessions = localStorage.getItem(userPrefix + 'sessions');
 
     if (savedConfig) {
         try { state.config = JSON.parse(savedConfig); } catch (e) { }
@@ -69,7 +71,10 @@ function loadState() {
 }
 
 function saveState() {
-    localStorage.setItem('studytrack_config', JSON.stringify(state.config));
-    localStorage.setItem('studytrack_modules', JSON.stringify(state.modules));
-    localStorage.setItem('studytrack_sessions', JSON.stringify(state.sessions));
+    if (!state.currentUser) return;
+    const userPrefix = `studytrack_${state.currentUser}_`;
+
+    localStorage.setItem(userPrefix + 'config', JSON.stringify(state.config));
+    localStorage.setItem(userPrefix + 'modules', JSON.stringify(state.modules));
+    localStorage.setItem(userPrefix + 'sessions', JSON.stringify(state.sessions));
 }

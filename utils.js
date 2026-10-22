@@ -69,3 +69,17 @@ function showToast(message, type = "info") {
         setTimeout(() => toast.remove(), 300);
     }, 2500);
 }
+
+// --- USER MANAGEMENT & LOGOUT ---
+function logout() {
+    localStorage.removeItem('studytrack_current_user');
+    window.location.href = 'index.html';
+}
+
+function displayCurrentUser() {
+    const user = localStorage.getItem('studytrack_current_user');
+    const el = document.getElementById('currentUserDisplay');
+    if (el && user) {
+        el.innerText = user;
+    }
+}

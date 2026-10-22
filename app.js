@@ -24,6 +24,7 @@ function switchTab(tabId) {
 // --- INITIALIZATION ON DOM READY ---
 window.addEventListener('DOMContentLoaded', () => {
     loadState();
+    displayCurrentUser();
     initDateInput();
     renderModuleCards();
     renderHistoryModuleFilter();

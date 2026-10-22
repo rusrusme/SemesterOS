@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SemesterOS - Anmelden</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <script>
+        // Falls bereits eingeloggt -> Direkt zur App
+        if (localStorage.getItem('studytrack_current_user')) {
+            window.location.href = 'app.html';
+        }
+
+        // Login-Aktion
+        function loginUser(username) {
+            const name = username || document.getElementById('usernameInput').value.trim();
+            if (!name) {
+                alert('Bitte gib einen Benutzernamen ein.');
+                return;
+            }
+
+            // User in globale Profil-Liste eintragen
+            let users = JSON.parse(localStorage.getItem('studytrack_users_list') || '[]');
+            if (!users.includes(name)) {
+                users.push(name);
+                localStorage.setItem('studytrack_users_list', JSON.stringify(users));
+            }
+
+            // Aktiven User setzen und zur App weiterleiten
+            localStorage.setItem('studytrack_current_user', name);
+            window.location.href = 'app.html';
+        }
+    </script>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased flex flex-col justify-between">
+
+    <!-- HEADER -->
+    <header
+        class="border-b border-slate-800/80 bg-slate-900/50 backdrop-blur px-6 py-4 flex items-center justify-between">
+        <a href="index.html" class="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+            <div
+                class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <i data-lucide="graduation-cap" class="w-6 h-6 text-white"></i>
+            </div>
+            <span class="font-bold text-lg text-slate-100">SemesterOS</span>
+        </a>
+        <a href="index.html"
+            class="text-xs text-slate-400 hover:text-slate-200 transition-colors flex items-center space-x-1">
+            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+            <span>Zur Startseite</span>
+        </a>
+    </header>
+
+    <!-- LOGIN FORM SECTION -->
+    <main class="max-w-md w-full mx-auto px-4 py-8 space-y-8 flex-1 flex flex-col justify-center">
+
+        <div class="text-center space-y-2">
+            <h1 class="text-3xl font-black text-slate-100 tracking-tight">Offline-Anmeldung</h1>
+            <p class="text-slate-400 text-sm">Wähle deinen Benutzernamen für dieses Gerät.</p>
+        </div>
+
+        <!-- LOGIN INPUT CARD -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
+            <div>
+                <label
+                    class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Benutzername</label>
+                <div class="relative">
+                    <i data-lucide="user" class="w-5 h-5 absolute left-3 top-3 text-slate-500"></i>
+                    <input type="text" id="usernameInput" placeholder="z.B. Max, Anna..."
+                        onkeydown="if(event.key==='Enter') loginUser()"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-blue-500 transition-colors">
+                </div>
+            </div>
+
+            <button onclick="loginUser()"
+                class="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 flex items-center justify-center space-x-2 text-sm transition-all active:scale-[0.99]">
+                <span>Dashboard öffnen</span>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <!-- VORHANDENE PROFILE SCHNELLWAHL -->
+        <div id="savedProfilesContainer" class="space-y-2 hidden">
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Gespeicherte Profile
+            </p>
+            <div id="profilesList" class="flex flex-wrap justify-center gap-2"></div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-slate-800/60 py-4 text-center text-xs text-slate-500">
+        SemesterOS • Lokaler Speicher ohne Server
+    </footer>
+
+    <script>
+        lucide.createIcons();
+
+        const users = JSON.parse(localStorage.getItem('studytrack_users_list') || '[]');
+        if (users.length > 0) {
+            const container = document.getElementById('savedProfilesContainer');
+            const list = document.getElementById('profilesList');
+            container.classList.remove('hidden');
+
+            list.innerHTML = users.map(u => `
+                <button onclick="loginUser('${u}')" class="px-3 py-1.5 bg-slate-900 border border-slate-800 hover:border-blue-500/50 rounded-xl text-xs font-medium text-slate-300 transition-all flex items-center space-x-1.5">
+                    <i data-lucide="user-check" class="w-3.5 h-3.5 text-blue-400"></i>
+                    <span>${u}</span>
+                </button>
+            `).join('');
+            lucide.createIcons();
+        }
+    </script>
+</body>
+
+</html>
