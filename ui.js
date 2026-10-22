@@ -1,138 +1,7 @@
-// --- TAILWIND CONFIGURATION ---
-tailwind.config = {
-    darkMode: 'class',
-    theme: {
-        extend: {
-            colors: {
-                brand: {
-                    50: '#f0f6ff',
-                    100: '#e0edff',
-                    500: '#3b82f6',
-                    600: '#2563eb',
-                    700: '#1d4ed8',
-                    900: '#1e3a8a',
-                }
-            }
-        }
-    }
-};
+let chartModulesInstance = null;
+let chartCategoriesInstance = null;
 
-// --- STANDARD MODULE ---
-const DEFAULT_MODULES = [
-    { id: 'analysis', name: 'Analysis', ects: 8, targetWeekly: 11.0, vl: 4, tu: 2, self: 5, color: '#3b82f6', icon: 'calculator' },
-    { id: 'gdb', name: 'GDB (Datenbanken)', ects: 6, targetWeekly: 8.5, vl: 3, tu: 2, self: 3.5, color: '#10b981', icon: 'database' },
-    { id: 'gbs', name: 'GBS (Betriebssysteme)', ects: 5, targetWeekly: 7.0, vl: 3, tu: 2, self: 2, color: '#f59e0b', icon: 'cpu' },
-    { id: 'security', name: 'IT-Security', ects: 5, targetWeekly: 6.5, vl: 2, tu: 2, self: 2.5, color: '#ec4899', icon: 'shield-check' },
-    { id: 'signal', name: 'Signaltheorie', ects: 5, targetWeekly: 9.0, vl: 5, tu: 2, self: 2, color: '#8b5cf6', icon: 'activity' }
-];
-
-// --- GLOBAL STATE ---
-let state = {
-    modules: [],
-    sessions: [],
-    selectedModuleId: 'analysis',
-    selectedDuration: 1.5,
-    selectedCategory: 'Selbststudium',
-    currentKw: getCurrentISOWeek(),
-    timerRunning: false,
-    timerSeconds: 0,
-    timerInterval: null
-};
-
-// --- INITIALIZATION ---
-window.addEventListener('DOMContentLoaded', () => {
-    loadState();
-    initDateInput();
-    renderModuleCards();
-    renderHistoryModuleFilter();
-    updateKwDisplay();
-    switchTab('quicktrack');
-    refreshIcons();
-});
-
-function refreshIcons() {
-    if (window.lucide && typeof lucide.createIcons === 'function') {
-        lucide.createIcons();
-    }
-}
-
-// --- HELPER: ISO WEEK CALCULATOR ---
-function getISOWeek(dateObj = new Date()) {
-    const d = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-}
-
-function getCurrentISOWeek() {
-    return getISOWeek(new Date());
-}
-
-function initDateInput() {
-    const today = new Date().toISOString().split('T')[0];
-    const el = document.getElementById('sessionDate');
-    if (el) el.value = today;
-}
-
-function updateKwDisplay() {
-    const el = document.getElementById('sessionDate');
-    if (el && el.value) {
-        const kw = getISOWeek(new Date(el.value));
-        const badge = document.getElementById('kwBadge');
-        if (badge) badge.innerText = `KW ${kw}`;
-    }
-}
-
-// --- LOCAL STORAGE ---
-function loadState() {
-    const savedSessions = localStorage.getItem('studytrack_cs_data');
-    const savedModules = localStorage.getItem('studytrack_modules');
-
-    if (savedModules) {
-        try { state.modules = JSON.parse(savedModules); } catch (e) { state.modules = DEFAULT_MODULES; }
-    } else {
-        state.modules = DEFAULT_MODULES;
-        saveState();
-    }
-
-    if (savedSessions) {
-        try { state.sessions = JSON.parse(savedSessions); } catch (e) { state.sessions = []; }
-    }
-
-    if (state.modules.length > 0 && !state.selectedModuleId) {
-        state.selectedModuleId = state.modules[0].id;
-    }
-}
-
-function saveState() {
-    localStorage.setItem('studytrack_cs_data', JSON.stringify(state.sessions));
-    localStorage.setItem('studytrack_modules', JSON.stringify(state.modules));
-}
-
-// --- TAB SWITCHING ---
-function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    const target = document.getElementById(`tab-${tabId}`);
-    if (target) target.classList.remove('hidden');
-
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.remove('text-blue-500');
-        btn.classList.add('text-slate-400');
-    });
-    const activeNav = document.getElementById(`nav-${tabId}`);
-    if (activeNav) {
-        activeNav.classList.remove('text-slate-400');
-        activeNav.classList.add('text-blue-500');
-    }
-
-    if (tabId === 'weekly') renderWeeklyDashboard();
-    if (tabId === 'semester') renderSemesterStats();
-    if (tabId === 'history') renderHistory();
-    refreshIcons();
-}
-
-// --- RENDER MODULE CARDS ---
+// --- MODUL CARDS ---
 function renderModuleCards() {
     const container = document.getElementById('moduleCardsContainer');
     if (!container) return;
@@ -156,10 +25,9 @@ function renderModuleCards() {
     </div>
     <div class="mt-2">
       <h4 class="font-bold text-xs text-slate-200 truncate">${m.name}</h4>
-      <p class="text-[10px] text-slate-400 mt-0.5">${m.targetWeekly} h/Woche</p>
+      <p class="text-[10px] text-slate-400 mt-0.5">${m.targetWeekly} h/Week</p>
     </div>
-  </button>
-`;
+  </button>`;
     }).join('');
 }
 
@@ -168,7 +36,6 @@ function selectModule(id) {
     renderModuleCards();
 }
 
-// --- QUICK DURATION & CATEGORY SELECTORS ---
 function setQuickDuration(val) {
     state.selectedDuration = val;
     const range = document.getElementById('durationRange');
@@ -205,7 +72,6 @@ function selectCategory(cat) {
     }
 }
 
-// --- SAVE SESSION ---
 function saveSession() {
     const dateInput = document.getElementById('sessionDate');
     if (!dateInput || !dateInput.value) {
@@ -213,7 +79,7 @@ function saveSession() {
         return;
     }
 
-    const kw = getISOWeek(new Date(dateInput.value));
+    const week = getISOWeek(new Date(dateInput.value));
     const noteVal = (document.getElementById('sessionNote')?.value || '').trim();
 
     const newSession = {
@@ -222,7 +88,7 @@ function saveSession() {
         duration: state.selectedDuration,
         category: state.selectedCategory,
         date: dateInput.value,
-        kw: kw,
+        week: week,
         note: noteVal
     };
 
@@ -236,85 +102,7 @@ function saveSession() {
     if (noteInput) noteInput.value = '';
 }
 
-// --- TRACKER MODE SWITCHING & TIMER ---
-function switchTrackerMode(mode) {
-    const quickContainer = document.getElementById('quick-track-container');
-    const timerContainer = document.getElementById('timer-container');
-    const quickBtn = document.getElementById('mode-quick-btn');
-    const timerBtn = document.getElementById('mode-timer-btn');
-
-    if (mode === 'quick') {
-        quickContainer?.classList.remove('hidden');
-        timerContainer?.classList.add('hidden');
-        quickBtn?.classList.add('bg-blue-600', 'text-white');
-        quickBtn?.classList.remove('text-slate-400');
-        timerBtn?.classList.remove('bg-blue-600', 'text-white');
-        timerBtn?.classList.add('text-slate-400');
-    } else {
-        quickContainer?.classList.add('hidden');
-        timerContainer?.classList.remove('hidden');
-        timerBtn?.classList.add('bg-blue-600', 'text-white');
-        timerBtn?.classList.remove('text-slate-400');
-        quickBtn?.classList.remove('bg-blue-600', 'text-white');
-        quickBtn?.classList.add('text-slate-400');
-    }
-}
-
-function toggleTimer() {
-    const startBtn = document.getElementById('startTimerBtn');
-    if (!state.timerRunning) {
-        state.timerRunning = true;
-        if (startBtn) {
-            startBtn.innerHTML = `<i data-lucide="pause" class="w-5 h-5"></i><span>Pause</span>`;
-            startBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
-            startBtn.classList.add('bg-amber-600', 'hover:bg-amber-500');
-        }
-
-        state.timerInterval = setInterval(() => {
-            state.timerSeconds++;
-            updateTimerDisplay();
-        }, 1000);
-    } else {
-        state.timerRunning = false;
-        clearInterval(state.timerInterval);
-        if (startBtn) {
-            startBtn.innerHTML = `<i data-lucide="play" class="w-5 h-5"></i><span>Weiter</span>`;
-            startBtn.classList.remove('bg-amber-600', 'hover:bg-amber-500');
-            startBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
-        }
-
-        const hours = (state.timerSeconds / 3600).toFixed(2);
-        if (parseFloat(hours) > 0) {
-            updateDurationFromRange(hours);
-            showToast(`Timer gestoppt: ${hours} Stunden eingetragen.`, "info");
-        }
-    }
-    refreshIcons();
-}
-
-function resetTimer() {
-    state.timerRunning = false;
-    clearInterval(state.timerInterval);
-    state.timerSeconds = 0;
-    updateTimerDisplay();
-    const startBtn = document.getElementById('startTimerBtn');
-    if (startBtn) {
-        startBtn.innerHTML = `<i data-lucide="play" class="w-5 h-5"></i><span>Start</span>`;
-        startBtn.classList.remove('bg-amber-600');
-        startBtn.classList.add('bg-emerald-600');
-    }
-    refreshIcons();
-}
-
-function updateTimerDisplay() {
-    const hrs = Math.floor(state.timerSeconds / 3600).toString().padStart(2, '0');
-    const mins = Math.floor((state.timerSeconds % 3600) / 60).toString().padStart(2, '0');
-    const secs = (state.timerSeconds % 60).toString().padStart(2, '0');
-    const disp = document.getElementById('timerDisplay');
-    if (disp) disp.innerText = `${hrs}:${mins}:${secs}`;
-}
-
-// --- TAB 2: WEEKLY DASHBOARD ---
+// --- WOCHEN DASHBOARD ---
 function changeKw(delta) {
     state.currentKw = Math.max(1, Math.min(53, state.currentKw + delta));
     renderWeeklyDashboard();
@@ -324,9 +112,9 @@ function renderWeeklyDashboard() {
     const title = document.getElementById('weeklyKwTitle');
     if (title) title.innerText = `Kalenderwoche ${state.currentKw}`;
 
-    const kwSessions = state.sessions.filter(s => s.kw === state.currentKw);
+    const kwSessions = state.sessions.filter(s => s.week === state.currentKw);
     const totalIst = kwSessions.reduce((sum, s) => sum + s.duration, 0);
-    const totalSoll = 42.0;
+    const totalSoll = state.modules.reduce((sum, m) => sum + m.targetWeekly, 0) || 42.0;
     const pct = Math.min(100, Math.round((totalIst / totalSoll) * 100));
 
     const totalIstDisp = document.getElementById('weeklyTotalIst');
@@ -374,19 +162,16 @@ function renderWeeklyDashboard() {
     <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
       <div class="h-full ${colorClass} rounded-full transition-all duration-300" style="width: ${modPct}%"></div>
     </div>
-  </div>
-`;
+  </div>`;
         }).join('');
     }
 }
 
-// --- TAB 3: SEMESTER STATS & CHARTS ---
-let chartModulesInstance = null;
-let chartCategoriesInstance = null;
-
+// --- STATISTIKEN & CHARTS ---
 function renderSemesterStats() {
     const totalIst = state.sessions.reduce((sum, s) => sum + s.duration, 0);
-    const totalSoll = 870.0;
+    const totalEcts = state.modules.reduce((sum, m) => sum + m.ects, 0) || 30;
+    const totalSoll = totalEcts * 30;
     const pct = Math.min(100, Math.round((totalIst / totalSoll) * 100));
 
     const totalDisp = document.getElementById('semIstTotal');
@@ -464,7 +249,7 @@ function renderCharts() {
     }
 }
 
-// --- TAB 4: HISTORY ---
+// --- VERLAUF & HISTORIE ---
 function renderHistoryModuleFilter() {
     const select = document.getElementById('historyModuleFilter');
     if (!select) return;
@@ -501,7 +286,7 @@ function renderHistory() {
       <div class="min-w-0">
         <div class="flex items-center space-x-2">
           <h5 class="text-xs font-bold text-slate-200 truncate">${mod.name}</h5>
-          <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">KW ${s.kw}</span>
+          <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">Week ${s.week}</span>
         </div>
         <p class="text-[11px] text-slate-400 truncate mt-0.5">${s.date} • ${s.category}${s.note ? ' • ' + s.note : ''}</p>
       </div>
@@ -512,8 +297,7 @@ function renderHistory() {
         <i data-lucide="trash-2" class="w-4 h-4"></i>
       </button>
     </div>
-  </div>
-`;
+  </div>`;
     }).join('');
 
     refreshIcons();
@@ -528,15 +312,91 @@ function deleteSession(id) {
     }
 }
 
-// --- MODALS & EXPORT/IMPORT ---
-function openModal(id) { document.getElementById(id)?.classList.remove('hidden'); }
-function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
+// --- MODUL-VERWALTUNG (SETUP) ---
+function addCustomModule() {
+    const nameInput = document.getElementById('newModName');
+    const ectsInput = document.getElementById('newModEcts');
+    const weeklyInput = document.getElementById('newModWeekly');
+    const colorInput = document.getElementById('newModColor');
 
+    const name = nameInput ? nameInput.value.trim() : '';
+    const ects = parseFloat(ectsInput?.value) || 5;
+    const weekly = parseFloat(weeklyInput?.value) || 5;
+    const color = colorInput?.value || '#3b82f6';
+
+    if (!name) {
+        showToast("Bitte gib einen Modulnamen ein.", "error");
+        return;
+    }
+
+    const newModule = {
+        id: 'mod_' + Date.now(),
+        name: name,
+        ects: ects,
+        targetWeekly: weekly,
+        color: color
+    };
+
+    state.modules.push(newModule);
+    saveState();
+
+    if (nameInput) nameInput.value = '';
+    renderModuleCards();
+    renderHistoryModuleFilter();
+    renderSettingsModuleList();
+    showToast(`Modul "${name}" hinzugefügt!`, "success");
+}
+
+function deleteCustomModule(id) {
+    if (confirm("Modul und alle zugehörigen Einträge wirklich löschen?")) {
+        state.modules = state.modules.filter(m => m.id !== id);
+        state.sessions = state.sessions.filter(s => s.moduleId !== id);
+        saveState();
+
+        if (state.selectedModuleId === id && state.modules.length > 0) {
+            state.selectedModuleId = state.modules[0].id;
+        }
+
+        renderModuleCards();
+        renderHistoryModuleFilter();
+        renderSettingsModuleList();
+        showToast("Modul entfernt.", "info");
+    }
+}
+
+function renderSettingsModuleList() {
+    const container = document.getElementById('settingsModuleList');
+    if (!container) return;
+
+    if (state.modules.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 py-2">Keine Module vorhanden.</p>`;
+        return;
+    }
+
+    container.innerHTML = state.modules.map(m => `
+        <div class="flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl">
+            <div class="flex items-center space-x-3">
+                <span class="w-3 h-3 rounded-full" style="background-color: ${m.color || '#3b82f6'}"></span>
+                <div>
+                    <p class="text-xs font-bold text-slate-200">${m.name}</p>
+                    <p class="text-[10px] text-slate-400">${m.ects} ECTS • ${m.targetWeekly} h/Week</p>
+                </div>
+            </div>
+            <button onclick="deleteCustomModule('${m.id}')" class="p-1.5 text-slate-500 hover:text-red-400 transition-colors">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+        </div>
+    `).join('');
+
+    refreshIcons();
+}
+
+// --- EXPORT & IMPORT ---
 function exportCSV() {
     let csv = "ID;Datum;Kalenderwoche;Modul;Kategorie;Dauer_Std;Notiz\n";
     state.sessions.forEach(s => {
         const mod = state.modules.find(m => m.id === s.moduleId);
-        csv += `"${s.id}";"${s.date}";${s.kw};"${mod ? mod.name : s.moduleId}";"${s.category}";${s.duration};"${s.note || ''}"\n`;
+        csv += `"${s.id}";"${s.date}";${s.week};"${mod ? mod.name : s.moduleId}";"${s.category}";${s.duration};"${s.note || ''}"\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -585,31 +445,4 @@ function resetData() {
         showToast("Alle Daten zurückgesetzt.", "info");
         switchTab('quicktrack');
     }
-}
-
-// --- THEME TOGGLE ---
-function toggleTheme() {
-    document.documentElement.classList.toggle('dark');
-}
-
-// --- TOAST SYSTEM ---
-function showToast(message, type = "info") {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-
-    const toast = document.createElement('div');
-    let bg = "bg-slate-800 text-slate-100 border-slate-700";
-    if (type === "success") bg = "bg-emerald-900 text-emerald-100 border-emerald-700";
-    if (type === "error") bg = "bg-red-900 text-red-100 border-red-700";
-
-    toast.className = `p-3 rounded-xl border shadow-lg text-xs font-semibold transform transition-all duration-300 opacity-0 translate-y-2 ${bg}`;
-    toast.innerText = message;
-
-    container.appendChild(toast);
-
-    setTimeout(() => { toast.classList.remove('opacity-0', 'translate-y-2'); }, 10);
-    setTimeout(() => {
-        toast.classList.add('opacity-0', 'translate-y-2');
-        setTimeout(() => toast.remove(), 300);
-    }, 2500);
 }

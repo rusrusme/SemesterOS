@@ -75,8 +75,8 @@
             <div id="quick-track-container" class="space-y-6">
                 <!-- Modul-Auswahl (Touch Cards) -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">1. Modul
-                        auswählen</label>
+                    <label
+                        class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Modules</label>
                     <div id="moduleCardsContainer" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                         <!-- Cards will be generated via JS -->
                     </div>
@@ -85,8 +85,8 @@
                 <!-- Schnellwahl Dauer -->
                 <div>
                     <div class="flex justify-between items-center mb-2">
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">2. Dauer
-                            (Stunden)</label>
+                        <label
+                            class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Duration</label>
                         <span id="durationDisplay"
                             class="text-sm font-bold text-blue-400 bg-blue-950/60 border border-blue-800/50 px-2.5 py-0.5 rounded-full">1.5
                             Std.</span>
@@ -110,34 +110,32 @@
 
                 <!-- Kategorie -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">3.
-                        Kategorie</label>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        Category</label>
                     <div class="grid grid-cols-3 gap-2">
                         <button type="button" onclick="selectCategory('Selbststudium')" id="cat-Selbststudium"
-                            class="cat-btn py-2.5 px-2 bg-blue-600 text-white border border-blue-500 rounded-xl text-xs font-medium text-center transition-all">Selbststudium</button>
+                            class="cat-btn py-2.5 px-2 bg-blue-600 text-white border border-blue-500 rounded-xl text-xs font-medium text-center transition-all">Home-Study</button>
                         <button type="button" onclick="selectCategory('Präsenzzeit')" id="cat-Präsenzzeit"
-                            class="cat-btn py-2.5 px-2 bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 rounded-xl text-xs font-medium text-center transition-all">Präsenzzeit</button>
-                        <button type="button" onclick="selectCategory('Nachbereitung')" id="cat-Nachbereitung"
-                            class="cat-btn py-2.5 px-2 bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 rounded-xl text-xs font-medium text-center transition-all">Nachbereitung</button>
+                            class="cat-btn py-2.5 px-2 bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 rounded-xl text-xs font-medium text-center transition-all">Attendance</button>
                     </div>
                 </div>
 
                 <!-- Datum & Notiz -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Datum &
-                            KW</label>
+                        <label
+                            class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Date</label>
                         <div class="relative">
                             <input type="date" id="sessionDate" onchange="updateKwDisplay()"
                                 class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
                             <span id="kwBadge"
-                                class="absolute right-3 top-3 text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md">KW
+                                class="absolute right-3 top-3 text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md">Week
                                 --</span>
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Thema /
-                            Notiz (optional)</label>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Topic /
+                            Notes</label>
                         <input type="text" id="sessionNote" placeholder="z.B. Übungsblatt 4, Tutorium..."
                             class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-blue-500 placeholder-slate-600">
                     </div>
@@ -182,7 +180,7 @@
         <!-- TAB 2: WOCHEN-DASHBOARD -->
         <section id="tab-weekly" class="tab-content hidden space-y-6">
 
-            <!-- KW Selector Header -->
+            <!-- Week Selector Header -->
             <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-3 rounded-2xl">
                 <button onclick="changeKw(-1)"
                     class="p-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-colors">
@@ -224,7 +222,7 @@
             <!-- Modules Soll vs Ist Breakdown -->
             <div class="space-y-3">
                 <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1">Modul-Übersicht (Diese
-                    KW)</h3>
+                    Week)</h3>
                 <div id="weeklyModuleList" class="space-y-2.5">
                     <!-- Generated via JS -->
                 </div>
@@ -232,7 +230,7 @@
 
         </section>
 
-        <!-- TAB 3: SEMESTER-STATISTIK -->
+        <!-- TAB 3: STATISTICS -->
         <section id="tab-semester" class="tab-content hidden space-y-6">
 
             <!-- KPI Overview Cards -->
@@ -362,7 +360,7 @@
                             class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-slate-200">
                     </div>
                     <div>
-                        <input type="number" id="newModWeekly" placeholder="Std./Woche"
+                        <input type="number" id="newModWeekly" placeholder="Std./Week"
                             class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-slate-200">
                     </div>
                 </div>
@@ -460,7 +458,11 @@
     <div id="toastContainer" class="fixed top-16 right-4 z-50 space-y-2 pointer-events-none"></div>
 
     <!-- APPLICATION LOGIC -->
-    <script src="script.js"></script>
+    <script src="config.js"></script>
+    <script src="utils.js"></script>
+    <script src="timer.js"></script>
+    <script src="ui.js"></script>
+    <script src="app.js"></script>
 </body>
 
 </html>
