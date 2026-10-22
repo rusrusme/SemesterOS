@@ -323,6 +323,58 @@
 
         </section>
 
+        <!-- TAB 5: SEMESTER SETUP & MODULE VERWALTEN -->
+        <section id="tab-settings" class="tab-content hidden space-y-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+                <h3 class="font-bold text-base text-slate-100 flex items-center space-x-2">
+                    <i data-lucide="sliders" class="w-5 h-5 text-blue-500"></i>
+                    <span>Semester-Konfiguration</span>
+                </h3>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Semester Name</label>
+                        <input type="text" id="cfgSemesterName" value="3. Semester Informatik"
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-slate-200">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Ziel-ECTS Gesamt</label>
+                        <input type="number" id="cfgEctsTarget" value="30"
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-slate-200">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modul anlegen -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+                <h3 class="font-bold text-base text-slate-100 flex items-center space-x-2">
+                    <i data-lucide="plus-square" class="w-5 h-5 text-emerald-500"></i>
+                    <span>Neues Modul hinzufügen</span>
+                </h3>
+
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div class="sm:col-span-2">
+                        <input type="text" id="newModName" placeholder="Modulname (z.B. Physik I)"
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-slate-200">
+                    </div>
+                    <div>
+                        <input type="number" id="newModEcts" placeholder="ECTS (z.B. 6)"
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-slate-200">
+                    </div>
+                    <div>
+                        <input type="number" id="newModWeekly" placeholder="Std./Woche"
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-slate-200">
+                    </div>
+                </div>
+
+                <button onclick="addCustomModule()"
+                    class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center space-x-2">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    <span>Modul Speichern</span>
+                </button>
+            </div>
+        </section>
+
     </main>
 
     <!-- BOTTOM NAVIGATION (MOBILE APPLIKE) -->
@@ -351,6 +403,12 @@
                 class="nav-btn flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-slate-400 hover:text-slate-200 transition-colors">
                 <i data-lucide="list" class="w-5 h-5"></i>
                 <span class="text-[10px] font-medium mt-1">Verlauf</span>
+            </button>
+
+            <button onclick="switchTab('settings')" id="nav-settings"
+                class="nav-btn flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-slate-400 hover:text-slate-200 transition-colors">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium mt-1">Setup</span>
             </button>
         </div>
     </nav>

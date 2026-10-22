@@ -17,8 +17,8 @@ tailwind.config = {
     }
 };
 
-// --- MODULE CONFIGURATION ---
-const MODULES = [
+// --- STANDARD MODULE ---
+const DEFAULT_MODULES = [
     { id: 'analysis', name: 'Analysis', ects: 8, targetWeekly: 11.0, vl: 4, tu: 2, self: 5, color: '#3b82f6', icon: 'calculator' },
     { id: 'gdb', name: 'GDB (Datenbanken)', ects: 6, targetWeekly: 8.5, vl: 3, tu: 2, self: 3.5, color: '#10b981', icon: 'database' },
     { id: 'gbs', name: 'GBS (Betriebssysteme)', ects: 5, targetWeekly: 7.0, vl: 3, tu: 2, self: 2, color: '#f59e0b', icon: 'cpu' },
@@ -28,6 +28,7 @@ const MODULES = [
 
 // --- GLOBAL STATE ---
 let state = {
+    modules: [],
     sessions: [],
     selectedModuleId: 'analysis',
     selectedDuration: 1.5,
@@ -46,10 +47,14 @@ window.addEventListener('DOMContentLoaded', () => {
     renderHistoryModuleFilter();
     updateKwDisplay();
     switchTab('quicktrack');
-
-    // Initialize Lucide Icons
-    lucide.createIcons();
+    refreshIcons();
 });
+
+function refreshIcons() {
+    if (window.lucide && typeof lucide.createIcons === 'function') {
+        lucide.createIcons();
+    }
+}
 
 // --- HELPER: ISO WEEK CALCULATOR ---
 function getISOWeek(dateObj = new Date()) {
@@ -66,43 +71,50 @@ function getCurrentISOWeek() {
 
 function initDateInput() {
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('sessionDate').value = today;
+    const el = document.getElementById('sessionDate');
+    if (el) el.value = today;
 }
 
 function updateKwDisplay() {
-    const dateVal = document.getElementById('sessionDate').value;
-    if (dateVal) {
-        const kw = getISOWeek(new Date(dateVal));
-        document.getElementById('kwBadge').innerText = `KW ${kw}`;
+    const el = document.getElementById('sessionDate');
+    if (el && el.value) {
+        const kw = getISOWeek(new Date(el.value));
+        const badge = document.getElementById('kwBadge');
+        if (badge) badge.innerText = `KW ${kw}`;
     }
 }
 
 // --- LOCAL STORAGE ---
 function loadState() {
-    const saved = localStorage.getItem('studytrack_cs_data');
-    if (saved) {
-        try {
-            state.sessions = JSON.parse(saved);
-        } catch (e) {
-            console.error("Failed to parse localStorage data", e);
-        }
+    const savedSessions = localStorage.getItem('studytrack_cs_data');
+    const savedModules = localStorage.getItem('studytrack_modules');
+
+    if (savedModules) {
+        try { state.modules = JSON.parse(savedModules); } catch (e) { state.modules = DEFAULT_MODULES; }
     } else {
-        // Seed initial sample session for demonstration
-        state.sessions = [
-            { id: '1', moduleId: 'analysis', duration: 1.5, category: 'Selbststudium', date: new Date().toISOString().split('T')[0], kw: getCurrentISOWeek(), note: 'Übungsblatt Start' }
-        ];
+        state.modules = DEFAULT_MODULES;
         saveState();
+    }
+
+    if (savedSessions) {
+        try { state.sessions = JSON.parse(savedSessions); } catch (e) { state.sessions = []; }
+    }
+
+    if (state.modules.length > 0 && !state.selectedModuleId) {
+        state.selectedModuleId = state.modules[0].id;
     }
 }
 
 function saveState() {
     localStorage.setItem('studytrack_cs_data', JSON.stringify(state.sessions));
+    localStorage.setItem('studytrack_modules', JSON.stringify(state.modules));
 }
 
 // --- TAB SWITCHING ---
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+    const target = document.getElementById(`tab-${tabId}`);
+    if (target) target.classList.remove('hidden');
 
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('text-blue-500');
@@ -117,12 +129,20 @@ function switchTab(tabId) {
     if (tabId === 'weekly') renderWeeklyDashboard();
     if (tabId === 'semester') renderSemesterStats();
     if (tabId === 'history') renderHistory();
+    refreshIcons();
 }
 
-// --- RENDER MODULE SELECTION CARDS ---
+// --- RENDER MODULE CARDS ---
 function renderModuleCards() {
     const container = document.getElementById('moduleCardsContainer');
-    container.innerHTML = MODULES.map(m => {
+    if (!container) return;
+
+    if (state.modules.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 col-span-3 py-4 text-center">Keine Module vorhanden. Lege welche im Setup an.</p>`;
+        return;
+    }
+
+    container.innerHTML = state.modules.map(m => {
         const isSelected = m.id === state.selectedModuleId;
         return `
   <button type="button" onclick="selectModule('${m.id}')" 
@@ -131,7 +151,7 @@ function renderModuleCards() {
                 : 'bg-slate-900 border-slate-800 hover:bg-slate-800/80'
             }">
     <div class="flex justify-between items-start">
-      <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${m.color}"></span>
+      <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${m.color || '#3b82f6'}"></span>
       <span class="text-[10px] font-semibold text-slate-400">${m.ects} ECTS</span>
     </div>
     <div class="mt-2">
@@ -151,20 +171,25 @@ function selectModule(id) {
 // --- QUICK DURATION & CATEGORY SELECTORS ---
 function setQuickDuration(val) {
     state.selectedDuration = val;
-    document.getElementById('durationRange').value = val;
-    document.getElementById('durationDisplay').innerText = `${val.toFixed(1)} Std.`;
+    const range = document.getElementById('durationRange');
+    const disp = document.getElementById('durationDisplay');
+    if (range) range.value = val;
+    if (disp) disp.innerText = `${val.toFixed(1)} Std.`;
 
     document.querySelectorAll('.duration-btn').forEach(btn => {
         btn.classList.remove('bg-blue-600', 'border-blue-500', 'text-white', 'shadow');
         btn.classList.add('bg-slate-900', 'border-slate-800', 'text-slate-300');
     });
-    event.currentTarget.classList.remove('bg-slate-900', 'border-slate-800', 'text-slate-300');
-    event.currentTarget.classList.add('bg-blue-600', 'border-blue-500', 'text-white', 'shadow');
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.remove('bg-slate-900', 'border-slate-800', 'text-slate-300');
+        event.currentTarget.classList.add('bg-blue-600', 'border-blue-500', 'text-white', 'shadow');
+    }
 }
 
 function updateDurationFromRange(val) {
     state.selectedDuration = parseFloat(val);
-    document.getElementById('durationDisplay').innerText = `${state.selectedDuration.toFixed(1)} Std.`;
+    const disp = document.getElementById('durationDisplay');
+    if (disp) disp.innerText = `${state.selectedDuration.toFixed(1)} Std.`;
 }
 
 function selectCategory(cat) {
@@ -182,21 +207,21 @@ function selectCategory(cat) {
 
 // --- SAVE SESSION ---
 function saveSession() {
-    const dateVal = document.getElementById('sessionDate').value;
-    if (!dateVal) {
+    const dateInput = document.getElementById('sessionDate');
+    if (!dateInput || !dateInput.value) {
         showToast("Bitte wähle ein Datum aus.", "error");
         return;
     }
 
-    const kw = getISOWeek(new Date(dateVal));
-    const noteVal = document.getElementById('sessionNote').value.trim();
+    const kw = getISOWeek(new Date(dateInput.value));
+    const noteVal = (document.getElementById('sessionNote')?.value || '').trim();
 
     const newSession = {
         id: Date.now().toString(),
         moduleId: state.selectedModuleId,
         duration: state.selectedDuration,
         category: state.selectedCategory,
-        date: dateVal,
+        date: dateInput.value,
         kw: kw,
         note: noteVal
     };
@@ -204,11 +229,11 @@ function saveSession() {
     state.sessions.unshift(newSession);
     saveState();
 
-    const mod = MODULES.find(m => m.id === state.selectedModuleId);
+    const mod = state.modules.find(m => m.id === state.selectedModuleId);
     showToast(`${newSession.duration}h für ${mod ? mod.name : ''} gespeichert!`, "success");
 
-    // Reset form fields
-    document.getElementById('sessionNote').value = '';
+    const noteInput = document.getElementById('sessionNote');
+    if (noteInput) noteInput.value = '';
 }
 
 // --- TRACKER MODE SWITCHING & TIMER ---
@@ -219,19 +244,19 @@ function switchTrackerMode(mode) {
     const timerBtn = document.getElementById('mode-timer-btn');
 
     if (mode === 'quick') {
-        quickContainer.classList.remove('hidden');
-        timerContainer.classList.add('hidden');
-        quickBtn.classList.add('bg-blue-600', 'text-white');
-        quickBtn.classList.remove('text-slate-400');
-        timerBtn.classList.remove('bg-blue-600', 'text-white');
-        timerBtn.classList.add('text-slate-400');
+        quickContainer?.classList.remove('hidden');
+        timerContainer?.classList.add('hidden');
+        quickBtn?.classList.add('bg-blue-600', 'text-white');
+        quickBtn?.classList.remove('text-slate-400');
+        timerBtn?.classList.remove('bg-blue-600', 'text-white');
+        timerBtn?.classList.add('text-slate-400');
     } else {
-        quickContainer.classList.add('hidden');
-        timerContainer.classList.remove('hidden');
-        timerBtn.classList.add('bg-blue-600', 'text-white');
-        timerBtn.classList.remove('text-slate-400');
-        quickBtn.classList.remove('bg-blue-600', 'text-white');
-        quickBtn.classList.add('text-slate-400');
+        quickContainer?.classList.add('hidden');
+        timerContainer?.classList.remove('hidden');
+        timerBtn?.classList.add('bg-blue-600', 'text-white');
+        timerBtn?.classList.remove('text-slate-400');
+        quickBtn?.classList.remove('bg-blue-600', 'text-white');
+        quickBtn?.classList.add('text-slate-400');
     }
 }
 
@@ -239,9 +264,11 @@ function toggleTimer() {
     const startBtn = document.getElementById('startTimerBtn');
     if (!state.timerRunning) {
         state.timerRunning = true;
-        startBtn.innerHTML = `<i data-lucide="pause" class="w-5 h-5"></i><span>Pause</span>`;
-        startBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
-        startBtn.classList.add('bg-amber-600', 'hover:bg-amber-500');
+        if (startBtn) {
+            startBtn.innerHTML = `<i data-lucide="pause" class="w-5 h-5"></i><span>Pause</span>`;
+            startBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
+            startBtn.classList.add('bg-amber-600', 'hover:bg-amber-500');
+        }
 
         state.timerInterval = setInterval(() => {
             state.timerSeconds++;
@@ -250,18 +277,19 @@ function toggleTimer() {
     } else {
         state.timerRunning = false;
         clearInterval(state.timerInterval);
-        startBtn.innerHTML = `<i data-lucide="play" class="w-5 h-5"></i><span>Weiter</span>`;
-        startBtn.classList.remove('bg-amber-600', 'hover:bg-amber-500');
-        startBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
+        if (startBtn) {
+            startBtn.innerHTML = `<i data-lucide="play" class="w-5 h-5"></i><span>Weiter</span>`;
+            startBtn.classList.remove('bg-amber-600', 'hover:bg-amber-500');
+            startBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
+        }
 
-        // Transfer logged hours to quick track input automatically
         const hours = (state.timerSeconds / 3600).toFixed(2);
         if (parseFloat(hours) > 0) {
             updateDurationFromRange(hours);
             showToast(`Timer gestoppt: ${hours} Stunden eingetragen.`, "info");
         }
     }
-    lucide.createIcons();
+    refreshIcons();
 }
 
 function resetTimer() {
@@ -270,17 +298,20 @@ function resetTimer() {
     state.timerSeconds = 0;
     updateTimerDisplay();
     const startBtn = document.getElementById('startTimerBtn');
-    startBtn.innerHTML = `<i data-lucide="play" class="w-5 h-5"></i><span>Start</span>`;
-    startBtn.classList.remove('bg-amber-600');
-    startBtn.classList.add('bg-emerald-600');
-    lucide.createIcons();
+    if (startBtn) {
+        startBtn.innerHTML = `<i data-lucide="play" class="w-5 h-5"></i><span>Start</span>`;
+        startBtn.classList.remove('bg-amber-600');
+        startBtn.classList.add('bg-emerald-600');
+    }
+    refreshIcons();
 }
 
 function updateTimerDisplay() {
     const hrs = Math.floor(state.timerSeconds / 3600).toString().padStart(2, '0');
     const mins = Math.floor((state.timerSeconds % 3600) / 60).toString().padStart(2, '0');
     const secs = (state.timerSeconds % 60).toString().padStart(2, '0');
-    document.getElementById('timerDisplay').innerText = `${hrs}:${mins}:${secs}`;
+    const disp = document.getElementById('timerDisplay');
+    if (disp) disp.innerText = `${hrs}:${mins}:${secs}`;
 }
 
 // --- TAB 2: WEEKLY DASHBOARD ---
@@ -290,47 +321,49 @@ function changeKw(delta) {
 }
 
 function renderWeeklyDashboard() {
-    document.getElementById('weeklyKwTitle').innerText = `Kalenderwoche ${state.currentKw}`;
+    const title = document.getElementById('weeklyKwTitle');
+    if (title) title.innerText = `Kalenderwoche ${state.currentKw}`;
 
-    // Filter sessions for current KW
     const kwSessions = state.sessions.filter(s => s.kw === state.currentKw);
-
-    // Total weekly stats
     const totalIst = kwSessions.reduce((sum, s) => sum + s.duration, 0);
     const totalSoll = 42.0;
     const pct = Math.min(100, Math.round((totalIst / totalSoll) * 100));
 
-    document.getElementById('weeklyTotalIst').innerText = `${totalIst.toFixed(1)} h`;
-    document.getElementById('weeklyTotalBar').style.width = `${pct}%`;
+    const totalIstDisp = document.getElementById('weeklyTotalIst');
+    const totalBar = document.getElementById('weeklyTotalBar');
+    if (totalIstDisp) totalIstDisp.innerText = `${totalIst.toFixed(1)} h`;
+    if (totalBar) totalBar.style.width = `${pct}%`;
 
     const badge = document.getElementById('weeklyStatusBadge');
-    if (pct >= 100) {
-        badge.innerText = "Ziel Erreicht!";
-        badge.className = "px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800/50";
-    } else if (pct >= 70) {
-        badge.innerText = "Auf Kurs";
-        badge.className = "px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-950 text-blue-400 border border-blue-800/50";
-    } else {
-        badge.innerText = "Rückstand";
-        badge.className = "px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-950 text-amber-400 border border-amber-800/50";
+    if (badge) {
+        if (pct >= 100) {
+            badge.innerText = "Ziel Erreicht!";
+            badge.className = "px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800/50";
+        } else if (pct >= 70) {
+            badge.innerText = "Auf Kurs";
+            badge.className = "px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-950 text-blue-400 border border-blue-800/50";
+        } else {
+            badge.innerText = "Rückstand";
+            badge.className = "px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-950 text-amber-400 border border-amber-800/50";
+        }
     }
 
-    // Render per module breakdown
     const listContainer = document.getElementById('weeklyModuleList');
-    listContainer.innerHTML = MODULES.map(m => {
-        const modSessions = kwSessions.filter(s => s.moduleId === m.id);
-        const modIst = modSessions.reduce((sum, s) => sum + s.duration, 0);
-        const modPct = Math.min(100, Math.round((modIst / m.targetWeekly) * 100));
+    if (listContainer) {
+        listContainer.innerHTML = state.modules.map(m => {
+            const modSessions = kwSessions.filter(s => s.moduleId === m.id);
+            const modIst = modSessions.reduce((sum, s) => sum + s.duration, 0);
+            const modPct = Math.min(100, Math.round((modIst / m.targetWeekly) * 100));
 
-        let colorClass = "bg-amber-500";
-        if (modPct >= 100) colorClass = "bg-emerald-500";
-        else if (modPct >= 70) colorClass = "bg-blue-500";
+            let colorClass = "bg-amber-500";
+            if (modPct >= 100) colorClass = "bg-emerald-500";
+            else if (modPct >= 70) colorClass = "bg-blue-500";
 
-        return `
+            return `
   <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 space-y-2">
     <div class="flex justify-between items-center text-xs">
       <div class="flex items-center space-x-2">
-        <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${m.color}"></span>
+        <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${m.color || '#3b82f6'}"></span>
         <span class="font-bold text-slate-200">${m.name}</span>
       </div>
       <div class="text-right">
@@ -338,13 +371,13 @@ function renderWeeklyDashboard() {
         <span class="text-slate-400">/ ${m.targetWeekly} h</span>
       </div>
     </div>
-    
     <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
       <div class="h-full ${colorClass} rounded-full transition-all duration-300" style="width: ${modPct}%"></div>
     </div>
   </div>
 `;
-    }).join('');
+        }).join('');
+    }
 }
 
 // --- TAB 3: SEMESTER STATS & CHARTS ---
@@ -356,46 +389,49 @@ function renderSemesterStats() {
     const totalSoll = 870.0;
     const pct = Math.min(100, Math.round((totalIst / totalSoll) * 100));
 
-    document.getElementById('semIstTotal').innerText = `${totalIst.toFixed(1)} h`;
-    document.getElementById('semIstPercent').innerText = `${pct}% erreicht`;
-    document.getElementById('semProgressBar').style.width = `${pct}%`;
-    document.getElementById('semProgressBarLabel').innerText = `${pct}%`;
+    const totalDisp = document.getElementById('semIstTotal');
+    const percentDisp = document.getElementById('semIstPercent');
+    const bar = document.getElementById('semProgressBar');
+    const barLabel = document.getElementById('semProgressBarLabel');
 
-    // Render Charts
+    if (totalDisp) totalDisp.innerText = `${totalIst.toFixed(1)} h`;
+    if (percentDisp) percentDisp.innerText = `${pct}% erreicht`;
+    if (bar) bar.style.width = `${pct}%`;
+    if (barLabel) barLabel.innerText = `${pct}%`;
+
     renderCharts();
 }
 
 function renderCharts() {
-    // 1. Data by Module
-    const moduleTotals = MODULES.map(m => {
+    const moduleTotals = state.modules.map(m => {
         return state.sessions
             .filter(s => s.moduleId === m.id)
             .reduce((sum, s) => sum + s.duration, 0);
     });
 
-    const ctxModules = document.getElementById('chartModules').getContext('2d');
-    if (chartModulesInstance) chartModulesInstance.destroy();
+    const canvasMod = document.getElementById('chartModules');
+    if (canvasMod) {
+        const ctxModules = canvasMod.getContext('2d');
+        if (chartModulesInstance) chartModulesInstance.destroy();
 
-    chartModulesInstance = new Chart(ctxModules, {
-        type: 'doughnut',
-        data: {
-            labels: MODULES.map(m => m.name),
-            datasets: [{
-                data: moduleTotals,
-                backgroundColor: MODULES.map(m => m.color),
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } }
+        chartModulesInstance = new Chart(ctxModules, {
+            type: 'doughnut',
+            data: {
+                labels: state.modules.map(m => m.name),
+                datasets: [{
+                    data: moduleTotals,
+                    backgroundColor: state.modules.map(m => m.color || '#3b82f6'),
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } } }
             }
-        }
-    });
+        });
+    }
 
-    // 2. Data by Category
     const categories = ['Selbststudium', 'Präsenzzeit', 'Nachbereitung'];
     const catColors = ['#3b82f6', '#10b981', '#f59e0b'];
     const categoryTotals = categories.map(cat => {
@@ -404,39 +440,43 @@ function renderCharts() {
             .reduce((sum, s) => sum + s.duration, 0);
     });
 
-    const ctxCategories = document.getElementById('chartCategories').getContext('2d');
-    if (chartCategoriesInstance) chartCategoriesInstance.destroy();
+    const canvasCat = document.getElementById('chartCategories');
+    if (canvasCat) {
+        const ctxCategories = canvasCat.getContext('2d');
+        if (chartCategoriesInstance) chartCategoriesInstance.destroy();
 
-    chartCategoriesInstance = new Chart(ctxCategories, {
-        type: 'pie',
-        data: {
-            labels: categories,
-            datasets: [{
-                data: categoryTotals,
-                backgroundColor: catColors,
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } }
+        chartCategoriesInstance = new Chart(ctxCategories, {
+            type: 'pie',
+            data: {
+                labels: categories,
+                datasets: [{
+                    data: categoryTotals,
+                    backgroundColor: catColors,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } } }
             }
-        }
-    });
+        });
+    }
 }
 
 // --- TAB 4: HISTORY ---
 function renderHistoryModuleFilter() {
     const select = document.getElementById('historyModuleFilter');
+    if (!select) return;
     select.innerHTML = `<option value="ALL">Alle Module</option>` +
-        MODULES.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+        state.modules.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
 }
 
 function renderHistory() {
-    const searchTerm = document.getElementById('historySearch').value.toLowerCase();
-    const selectedModule = document.getElementById('historyModuleFilter').value;
+    const searchInput = document.getElementById('historySearch');
+    const filterSelect = document.getElementById('historyModuleFilter');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+    const selectedModule = filterSelect ? filterSelect.value : 'ALL';
 
     let filtered = state.sessions.filter(s => {
         const matchesModule = selectedModule === 'ALL' || s.moduleId === selectedModule;
@@ -445,6 +485,7 @@ function renderHistory() {
     });
 
     const listContainer = document.getElementById('historyList');
+    if (!listContainer) return;
 
     if (filtered.length === 0) {
         listContainer.innerHTML = `<p class="text-xs text-slate-500 text-center py-8">Keine Lerneinheiten gefunden.</p>`;
@@ -452,11 +493,11 @@ function renderHistory() {
     }
 
     listContainer.innerHTML = filtered.map(s => {
-        const mod = MODULES.find(m => m.id === s.moduleId) || { name: 'Unbekannt', color: '#64748b' };
+        const mod = state.modules.find(m => m.id === s.moduleId) || { name: 'Unbekannt', color: '#64748b' };
         return `
   <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between space-x-3">
     <div class="flex items-center space-x-3 min-w-0">
-      <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: ${mod.color}"></span>
+      <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: ${mod.color || '#3b82f6'}"></span>
       <div class="min-w-0">
         <div class="flex items-center space-x-2">
           <h5 class="text-xs font-bold text-slate-200 truncate">${mod.name}</h5>
@@ -465,7 +506,6 @@ function renderHistory() {
         <p class="text-[11px] text-slate-400 truncate mt-0.5">${s.date} • ${s.category}${s.note ? ' • ' + s.note : ''}</p>
       </div>
     </div>
-
     <div class="flex items-center space-x-3 flex-shrink-0">
       <span class="font-bold text-xs text-blue-400">${s.duration} h</span>
       <button onclick="deleteSession('${s.id}')" class="p-1 text-slate-500 hover:text-red-400 transition-colors">
@@ -476,7 +516,7 @@ function renderHistory() {
 `;
     }).join('');
 
-    lucide.createIcons();
+    refreshIcons();
 }
 
 function deleteSession(id) {
@@ -489,13 +529,13 @@ function deleteSession(id) {
 }
 
 // --- MODALS & EXPORT/IMPORT ---
-function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function openModal(id) { document.getElementById(id)?.classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
 
 function exportCSV() {
     let csv = "ID;Datum;Kalenderwoche;Modul;Kategorie;Dauer_Std;Notiz\n";
     state.sessions.forEach(s => {
-        const mod = MODULES.find(m => m.id === s.moduleId);
+        const mod = state.modules.find(m => m.id === s.moduleId);
         csv += `"${s.id}";"${s.date}";${s.kw};"${mod ? mod.name : s.moduleId}";"${s.category}";${s.duration};"${s.note || ''}"\n`;
     });
 
@@ -555,8 +595,9 @@ function toggleTheme() {
 // --- TOAST SYSTEM ---
 function showToast(message, type = "info") {
     const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
+    if (!container) return;
 
+    const toast = document.createElement('div');
     let bg = "bg-slate-800 text-slate-100 border-slate-700";
     if (type === "success") bg = "bg-emerald-900 text-emerald-100 border-emerald-700";
     if (type === "error") bg = "bg-red-900 text-red-100 border-red-700";
@@ -566,10 +607,7 @@ function showToast(message, type = "info") {
 
     container.appendChild(toast);
 
-    setTimeout(() => {
-        toast.classList.remove('opacity-0', 'translate-y-2');
-    }, 10);
-
+    setTimeout(() => { toast.classList.remove('opacity-0', 'translate-y-2'); }, 10);
     setTimeout(() => {
         toast.classList.add('opacity-0', 'translate-y-2');
         setTimeout(() => toast.remove(), 300);
