@@ -17,7 +17,7 @@ function switchTab(tabId) {
     if (tabId === 'weekly') renderWeeklyDashboard();
     if (tabId === 'semester') renderSemesterStats();
     if (tabId === 'history') renderHistory();
-    if (tabId === 'settings') renderSettingsModuleList();
+    if (tabId === 'setup') renderDegreeSemesterManagement();
     refreshIcons();
 }
 
@@ -25,10 +25,11 @@ function switchTab(tabId) {
 window.addEventListener('DOMContentLoaded', () => {
     loadState();
     displayCurrentUser();
+    updateTopBarContext();
     initDateInput();
     renderModuleCards();
     renderHistoryModuleFilter();
-    renderSettingsModuleList();
+    renderDegreeSemesterManagement();
     updateKwDisplay();
     switchTab('quicktrack');
     refreshIcons();

@@ -39,7 +39,7 @@ function toggleTimer() {
         state.timerRunning = false;
         clearInterval(state.timerInterval);
         if (startBtn) {
-            startBtn.innerHTML = `<i data-lucide="play" class="w-5 h-5"></i><span>Weiter</span>`;
+            startBtn.innerHTML = `<i data-lucide="play" class="w-5 h-5"></i><span>Continue</span>`;
             startBtn.classList.remove('bg-amber-600', 'hover:bg-amber-500');
             startBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
         }
@@ -47,7 +47,7 @@ function toggleTimer() {
         const hours = (state.timerSeconds / 3600).toFixed(2);
         if (parseFloat(hours) > 0) {
             updateDurationFromRange(hours);
-            showToast(`Timer gestoppt: ${hours} Stunden eingetragen.`, "info");
+            showToast(`Timer stopped: ${hours} hours transferred.`, "info");
         }
     }
     refreshIcons();

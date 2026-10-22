@@ -13,68 +13,91 @@ tailwind.config = {
     }
 };
 
-// --- DEFAULT MODULES ---
-const DEFAULT_MODULES = [
-    { id: 'analysis', name: 'Analysis', ects: 8, targetWeekly: 11.0, color: '#3b82f6' },
-    { id: 'gdb', name: 'GDB (Datenbanken)', ects: 6, targetWeekly: 8.5, color: '#10b981' },
-    { id: 'gbs', name: 'GBS (Betriebssysteme)', ects: 5, targetWeekly: 7.0, color: '#f59e0b' }
+// --- PREDEFINED VIBRANT MODULE COLORS ---
+const PRESET_COLORS = [
+    '#3b82f6', // Blue
+    '#10b981', // Emerald Green
+    '#f59e0b', // Amber Orange
+    '#ec4899', // Pink
+    '#8b5cf6', // Purple
+    '#ef4444', // Red
+    '#06b6d4', // Cyan
+    '#84cc16', // Lime
+    '#f97316'  // Bright Orange
 ];
 
 // --- GLOBAL STATE ---
 let state = {
     currentUser: localStorage.getItem('studytrack_current_user') || null,
-    config: {
-        semesterName: "SemesterOS",
-        creditTarget: 30
-    },
-    modules: [],
+    degrees: [],
+    activeDegreeId: null,
+    activeSemesterId: null,
+    editingColorModuleId: null, // Tracks which module's color picker is open
     sessions: [],
     selectedModuleId: null,
     selectedDuration: 1.5,
-    selectedCategory: 'Selbststudium',
+    selectedCategory: 'Self-Study',
     currentKw: 1,
     timerRunning: false,
     timerSeconds: 0,
     timerInterval: null
 };
 
-// --- LOCAL STORAGE LOGIC WITH USER SCOPE ---
+// --- HIERARCHY HELPERS (NULL-SAFE) ---
+function getActiveDegree() {
+    if (!state.degrees || state.degrees.length === 0) return null;
+    return state.degrees.find(d => d.id === state.activeDegreeId) || state.degrees[0] || null;
+}
+
+function getActiveSemester() {
+    const deg = getActiveDegree();
+    if (!deg || !deg.semesters || deg.semesters.length === 0) return null;
+    return deg.semesters.find(s => s.id === state.activeSemesterId) || deg.semesters[0] || null;
+}
+
+function getActiveModules() {
+    const sem = getActiveSemester();
+    return sem && sem.modules ? sem.modules : [];
+}
+
+// --- LOCAL STORAGE WITH USER SCOPE ---
 function loadState() {
     state.currentUser = localStorage.getItem('studytrack_current_user');
     if (!state.currentUser) return;
 
-    const userPrefix = `studytrack_${state.currentUser}_`;
+    const prefix = `studytrack_${state.currentUser}_`;
+    const savedDegrees = localStorage.getItem(prefix + 'degrees');
+    const savedSessions = localStorage.getItem(prefix + 'sessions');
+    const savedActiveDeg = localStorage.getItem(prefix + 'activeDegreeId');
+    const savedActiveSem = localStorage.getItem(prefix + 'activeSemesterId');
 
-    const savedConfig = localStorage.getItem(userPrefix + 'config');
-    const savedModules = localStorage.getItem(userPrefix + 'modules');
-    const savedSessions = localStorage.getItem(userPrefix + 'sessions');
-
-    if (savedConfig) {
-        try { state.config = JSON.parse(savedConfig); } catch (e) { }
+    if (savedDegrees) {
+        try { state.degrees = JSON.parse(savedDegrees); } catch (e) { state.degrees = []; }
+    } else {
+        state.degrees = [];
+        saveState();
     }
+
     if (savedSessions) {
         try { state.sessions = JSON.parse(savedSessions); } catch (e) { state.sessions = []; }
     }
 
-    if (savedModules) {
-        try { state.modules = JSON.parse(savedModules); } catch (e) { state.modules = DEFAULT_MODULES; }
-    } else {
-        state.modules = DEFAULT_MODULES;
-        saveState();
-    }
+    state.activeDegreeId = savedActiveDeg || (state.degrees[0] ? state.degrees[0].id : null);
+    const activeDeg = getActiveDegree();
+    state.activeSemesterId = savedActiveSem || (activeDeg && activeDeg.semesters && activeDeg.semesters[0] ? activeDeg.semesters[0].id : null);
 
-    if (state.modules.length > 0) {
-        state.selectedModuleId = state.modules[0].id;
-    }
+    const activeMods = getActiveModules();
+    state.selectedModuleId = activeMods.length > 0 ? activeMods[0].id : null;
 
     state.currentKw = getCurrentISOWeek();
 }
 
 function saveState() {
     if (!state.currentUser) return;
-    const userPrefix = `studytrack_${state.currentUser}_`;
+    const prefix = `studytrack_${state.currentUser}_`;
 
-    localStorage.setItem(userPrefix + 'config', JSON.stringify(state.config));
-    localStorage.setItem(userPrefix + 'modules', JSON.stringify(state.modules));
-    localStorage.setItem(userPrefix + 'sessions', JSON.stringify(state.sessions));
+    localStorage.setItem(prefix + 'degrees', JSON.stringify(state.degrees));
+    localStorage.setItem(prefix + 'sessions', JSON.stringify(state.sessions));
+    if (state.activeDegreeId) localStorage.setItem(prefix + 'activeDegreeId', state.activeDegreeId);
+    if (state.activeSemesterId) localStorage.setItem(prefix + 'activeSemesterId', state.activeSemesterId);
 }

@@ -1,25 +1,28 @@
 <!DOCTYPE html>
-<html lang="de" class="dark">
+<html lang="en" class="dark">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SemesterOS - App</title>
+    <title>SemesterOS - Dashboard</title>
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Lucide Icons CDN -->
+    <!-- Lucide Icons CDN (UMD Bundle) -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <!-- Auth Guard (Isolated Scope) -->
     <script>
-        const currentUser = localStorage.getItem('studytrack_current_user');
-        if (!currentUser) {
-            window.location.href = 'login.html';
-        }
+        (function () {
+            const activeUser = localStorage.getItem('studytrack_current_user');
+            if (!activeUser) {
+                window.location.href = 'login.html';
+            }
+        })();
     </script>
 
     <link rel="stylesheet" href="styles.css">
@@ -38,75 +41,68 @@
             </div>
             <div>
                 <h1 class="font-bold text-base leading-none text-slate-100">SemesterOS</h1>
-                <p class="text-xs text-slate-400 mt-0.5">Semester Manager</p>
+                <p id="topBarContext" class="text-xs text-blue-400 font-medium mt-0.5">Academic Dashboard</p>
             </div>
         </div>
 
-        <!-- HEADER BUTTONS WITH LOGOUT -->
         <div class="flex items-center space-x-2">
-            <!-- Username & Logout Button -->
+            <!-- User Info & Logout -->
             <button onclick="logout()"
                 class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-red-950/60 border border-slate-700 hover:border-red-800/80 text-slate-300 hover:text-red-300 transition-all flex items-center space-x-1.5 text-xs font-semibold"
-                title="Abmelden">
+                title="Sign Out">
                 <i data-lucide="user" class="w-3.5 h-3.5 text-blue-400"></i>
                 <span id="currentUserDisplay">User</span>
                 <i data-lucide="log-out" class="w-3.5 h-3.5 ml-1 text-slate-500"></i>
             </button>
 
+            <!-- Data Modal Button -->
             <button onclick="openModal('backupModal')"
                 class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                title="Daten Export/Import">
+                title="Data Backup">
                 <i data-lucide="database" class="w-4 h-4"></i>
-            </button>
-
-            <button id="themeToggleBtn" onclick="toggleTheme()"
-                class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                title="Design wechseln">
-                <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
-                <i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
             </button>
         </div>
     </header>
 
-    <!-- MAIN CONTAINER -->
+    <!-- MAIN DASHBOARD CONTENT -->
     <main class="flex-1 max-w-4xl w-full mx-auto p-4 pb-24">
 
-        <!-- TAB 1: SCHNELLERFASSUNG & TIMER -->
+        <!-- TAB 1: TRACK & TIMER -->
         <section id="tab-quicktrack" class="tab-content space-y-6">
 
-            <!-- Sub-navigation: Quick Input vs. Timer -->
+            <!-- Tracker Mode Switcher -->
             <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
                 <button id="mode-quick-btn" onclick="switchTrackerMode('quick')"
                     class="flex-1 py-2 text-xs sm:text-sm font-medium rounded-lg bg-blue-600 text-white shadow transition-all flex items-center justify-center space-x-2">
                     <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                    <span>Schnellerfassung</span>
+                    <span>Quick Entry</span>
                 </button>
                 <button id="mode-timer-btn" onclick="switchTrackerMode('timer')"
                     class="flex-1 py-2 text-xs sm:text-sm font-medium rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center space-x-2">
                     <i data-lucide="timer" class="w-4 h-4"></i>
-                    <span>Live-Stoppuhr</span>
+                    <span>Live Timer</span>
                 </button>
             </div>
 
             <!-- MODE A: QUICK TRACK FORM -->
             <div id="quick-track-container" class="space-y-6">
-                <!-- Modul-Auswahl (Touch Cards) -->
+                <!-- Module Selection Cards -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Modul
-                        auswählen</label>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">1. Select
+                        Module</label>
                     <div id="moduleCardsContainer" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                        <!-- Cards will be generated via JS -->
+                        <!-- Populated by ui.js -->
                     </div>
                 </div>
 
-                <!-- Schnellwahl Dauer -->
+                <!-- Duration Selector -->
                 <div>
                     <div class="flex justify-between items-center mb-2">
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Dauer
-                            (Stunden)</label>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">2. Duration
+                            (Hours)</label>
                         <span id="durationDisplay"
                             class="text-sm font-bold text-blue-400 bg-blue-950/60 border border-blue-800/50 px-2.5 py-0.5 rounded-full">1.5
-                            Std.</span>
+                            hrs</span>
                     </div>
                     <div class="grid grid-cols-5 gap-1.5 mb-3">
                         <button type="button" onclick="setQuickDuration(0.5)"
@@ -125,25 +121,25 @@
                         class="w-full accent-blue-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer">
                 </div>
 
-                <!-- Kategorie -->
+                <!-- Category Selector -->
                 <div>
-                    <label
-                        class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Kategorie</label>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">3.
+                        Category</label>
                     <div class="grid grid-cols-3 gap-2">
-                        <button type="button" onclick="selectCategory('Selbststudium')" id="cat-Selbststudium"
-                            class="cat-btn py-2.5 px-2 bg-blue-600 text-white border border-blue-500 rounded-xl text-xs font-medium text-center transition-all">Selbststudium</button>
-                        <button type="button" onclick="selectCategory('Präsenzzeit')" id="cat-Präsenzzeit"
-                            class="cat-btn py-2.5 px-2 bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 rounded-xl text-xs font-medium text-center transition-all">Präsenzzeit</button>
-                        <button type="button" onclick="selectCategory('Nachbereitung')" id="cat-Nachbereitung"
-                            class="cat-btn py-2.5 px-2 bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 rounded-xl text-xs font-medium text-center transition-all">Nachbereitung</button>
+                        <button type="button" onclick="selectCategory('Self-Study')" id="cat-Self-Study"
+                            class="cat-btn py-2.5 px-2 bg-blue-600 text-white border border-blue-500 rounded-xl text-xs font-medium text-center transition-all">Self-Study</button>
+                        <button type="button" onclick="selectCategory('Attendance')" id="cat-Attendance"
+                            class="cat-btn py-2.5 px-2 bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 rounded-xl text-xs font-medium text-center transition-all">Attendance</button>
+                        <button type="button" onclick="selectCategory('Preparation')" id="cat-Preparation"
+                            class="cat-btn py-2.5 px-2 bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 rounded-xl text-xs font-medium text-center transition-all">Preparation</button>
                     </div>
                 </div>
 
-                <!-- Datum & Notiz -->
+                <!-- Date & Topic Input -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label
-                            class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Datum</label>
+                            class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Date</label>
                         <div class="relative">
                             <input type="date" id="sessionDate" onchange="updateKwDisplay()"
                                 onclick="try { this.showPicker(); } catch(e) {}"
@@ -154,9 +150,9 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Thema /
-                            Notiz (optional)</label>
-                        <input type="text" id="sessionNote" placeholder="z.B. Übungsblatt 4, Tutorium..."
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Topic /
+                            Notes (Optional)</label>
+                        <input type="text" id="sessionNote" placeholder="e.g. Problem Set 4, Lab..."
                             class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-blue-500 placeholder-slate-600">
                     </div>
                 </div>
@@ -165,7 +161,7 @@
                 <button onclick="saveSession()"
                     class="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-2xl shadow-lg shadow-blue-600/25 flex items-center justify-center space-x-2 text-base active:scale-[0.99] transition-all">
                     <i data-lucide="check-circle-2" class="w-5 h-5"></i>
-                    <span>Lerneinheit Speichern</span>
+                    <span>Save Study Session</span>
                 </button>
             </div>
 
@@ -190,14 +186,14 @@
                 </div>
 
                 <div class="p-4 bg-slate-900/60 border border-slate-800/80 rounded-xl">
-                    <p class="text-xs text-slate-400 text-center">Gestartete Zeit wird beim Stoppen direkt als Dauer in
-                        die Schnellerfassung übernommen.</p>
+                    <p class="text-xs text-slate-400 text-center">Tracked hours automatically transfer into Quick Entry
+                        when stopped.</p>
                 </div>
             </div>
 
         </section>
 
-        <!-- TAB 2: WOCHEN-DASHBOARD -->
+        <!-- TAB 2: WEEKLY DASHBOARD -->
         <section id="tab-weekly" class="tab-content hidden space-y-6">
             <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-3 rounded-2xl">
                 <button onclick="changeKw(-1)"
@@ -205,8 +201,8 @@
                     <i data-lucide="chevron-left" class="w-5 h-5"></i>
                 </button>
                 <div class="text-center">
-                    <span id="weeklyKwTitle" class="font-bold text-base text-slate-100">Kalenderwoche --</span>
-                    <p id="weeklyKwSubtitle" class="text-xs text-slate-400">Wochenübersicht</p>
+                    <span id="weeklyKwTitle" class="font-bold text-base text-slate-100">Calendar Week --</span>
+                    <p id="weeklyKwSubtitle" class="text-xs text-slate-400">Weekly Target Overview</p>
                 </div>
                 <button onclick="changeKw(1)"
                     class="p-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-colors">
@@ -218,16 +214,16 @@
                 class="bg-gradient-to-br from-slate-900 to-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-3">
                 <div class="flex justify-between items-end">
                     <div>
-                        <span
-                            class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Wochen-Fortschritt</span>
+                        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Weekly
+                            Progress</span>
                         <div class="flex items-baseline space-x-2 mt-0.5">
                             <span id="weeklyTotalIst" class="text-2xl font-bold text-slate-100">0.0 h</span>
-                            <span id="weeklyTotalSoll" class="text-sm text-slate-400">/ 42.0 h</span>
+                            <span id="weeklyTotalSoll" class="text-sm text-slate-400">/ 0.0 h</span>
                         </div>
                     </div>
                     <span id="weeklyStatusBadge"
                         class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300">In
-                        Bearbeitung</span>
+                        Progress</span>
                 </div>
 
                 <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
@@ -237,16 +233,18 @@
             </div>
 
             <div class="space-y-3">
-                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1">Modul-Übersicht</h3>
-                <div id="weeklyModuleList" class="space-y-2.5"></div>
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1">Module Breakdown</h3>
+                <div id="weeklyModuleList" class="space-y-2.5">
+                    <!-- Populated by ui.js -->
+                </div>
             </div>
         </section>
 
-        <!-- TAB 3: STATISTIK -->
+        <!-- TAB 3: STATISTICS & CHARTS -->
         <section id="tab-semester" class="tab-content hidden space-y-6">
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-2">
                 <div class="flex justify-between text-xs">
-                    <span class="text-slate-400">Fortschritt Gesamtes Semester</span>
+                    <span class="text-slate-400">Active Semester Progress</span>
                     <span id="semProgressBarLabel" class="font-bold text-slate-200">0%</span>
                 </div>
                 <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
@@ -258,7 +256,7 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-2">
-                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Verteilung nach Modulen
+                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Distribution by Module
                     </h4>
                     <div class="h-52 relative flex items-center justify-center">
                         <canvas id="chartModules"></canvas>
@@ -266,7 +264,7 @@
                 </div>
 
                 <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-2">
-                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Verteilung nach Kategorie
+                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Distribution by Category
                     </h4>
                     <div class="h-52 relative flex items-center justify-center">
                         <canvas id="chartCategories"></canvas>
@@ -275,94 +273,64 @@
             </div>
         </section>
 
-        <!-- TAB 4: HISTORIE -->
+        <!-- TAB 4: HISTORY -->
         <section id="tab-history" class="tab-content hidden space-y-4">
             <div class="flex flex-col sm:flex-row gap-2">
                 <div class="flex-1 relative">
                     <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-slate-500"></i>
-                    <input type="text" id="historySearch" oninput="renderHistory()" placeholder="In Notizen suchen..."
+                    <input type="text" id="historySearch" oninput="renderHistory()" placeholder="Search notes..."
                         class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
                 </div>
 
                 <select id="historyModuleFilter" onchange="renderHistory()"
                     class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
-                    <option value="ALL">Alle Module</option>
+                    <option value="ALL">All Modules</option>
                 </select>
             </div>
 
-            <div id="historyList" class="space-y-2"></div>
+            <div id="historyList" class="space-y-2">
+                <!-- Populated by ui.js -->
+            </div>
         </section>
 
-        <!-- TAB 5: MODULE & SETUP VERWALTEN -->
-        <section id="tab-settings" class="tab-content hidden space-y-6">
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-                <h3 class="font-bold text-base text-slate-100 flex items-center space-x-2">
-                    <i data-lucide="list-checks" class="w-5 h-5 text-blue-500"></i>
-                    <span>Aktuelle Module</span>
-                </h3>
-                <div id="settingsModuleList" class="space-y-2"></div>
-            </div>
-
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-                <h3 class="font-bold text-base text-slate-100 flex items-center space-x-2">
-                    <i data-lucide="plus-square" class="w-5 h-5 text-emerald-500"></i>
-                    <span>Neues Modul hinzufügen</span>
-                </h3>
-
-                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                    <div class="sm:col-span-2">
-                        <input type="text" id="newModName" placeholder="Modulname (z.B. Physik I)"
-                            class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-slate-200">
-                    </div>
-                    <div>
-                        <input type="number" id="newModEcts" placeholder="ECTS (z.B. 6)"
-                            class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-slate-200">
-                    </div>
-                    <div>
-                        <input type="number" id="newModWeekly" placeholder="Std./Woche"
-                            class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-slate-200">
-                    </div>
-                </div>
-
-                <button onclick="addCustomModule()"
-                    class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center space-x-2">
-                    <i data-lucide="plus" class="w-4 h-4"></i>
-                    <span>Modul Speichern</span>
-                </button>
+        <!-- TAB 5: SETUP (DEGREE -> SEMESTER -> MODULE MANAGEMENT) -->
+        <section id="tab-setup" class="tab-content hidden space-y-6">
+            <div id="degreeSemesterManagementContainer" class="space-y-6">
+                <!-- Populated dynamically by ui.js -->
             </div>
         </section>
 
     </main>
 
-    <!-- BOTTOM NAVIGATION -->
+    <!-- BOTTOM NAVIGATION BAR -->
     <nav
         class="fixed bottom-0 left-0 right-0 z-30 bg-slate-900/95 backdrop-blur border-t border-slate-800 px-2 py-1.5 pb-safe">
         <div class="max-w-md mx-auto grid grid-cols-5 gap-1">
             <button onclick="switchTab('quicktrack')" id="nav-quicktrack"
                 class="nav-btn flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-blue-500 transition-colors">
                 <i data-lucide="plus-circle" class="w-5 h-5"></i>
-                <span class="text-[10px] font-medium mt-1">Eintragen</span>
+                <span class="text-[10px] font-medium mt-1">Track</span>
             </button>
 
             <button onclick="switchTab('weekly')" id="nav-weekly"
                 class="nav-btn flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-slate-400 hover:text-slate-200 transition-colors">
                 <i data-lucide="calendar-days" class="w-5 h-5"></i>
-                <span class="text-[10px] font-medium mt-1">Woche</span>
+                <span class="text-[10px] font-medium mt-1">Weekly</span>
             </button>
 
             <button onclick="switchTab('semester')" id="nav-semester"
                 class="nav-btn flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-slate-400 hover:text-slate-200 transition-colors">
                 <i data-lucide="pie-chart" class="w-5 h-5"></i>
-                <span class="text-[10px] font-medium mt-1">Statistik</span>
+                <span class="text-[10px] font-medium mt-1">Stats</span>
             </button>
 
             <button onclick="switchTab('history')" id="nav-history"
                 class="nav-btn flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-slate-400 hover:text-slate-200 transition-colors">
                 <i data-lucide="list" class="w-5 h-5"></i>
-                <span class="text-[10px] font-medium mt-1">Verlauf</span>
+                <span class="text-[10px] font-medium mt-1">History</span>
             </button>
 
-            <button onclick="switchTab('settings')" id="nav-settings"
+            <button onclick="switchTab('setup')" id="nav-setup"
                 class="nav-btn flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-slate-400 hover:text-slate-200 transition-colors">
                 <i data-lucide="settings" class="w-5 h-5"></i>
                 <span class="text-[10px] font-medium mt-1">Setup</span>
@@ -370,14 +338,14 @@
         </div>
     </nav>
 
-    <!-- MODAL: DATA BACKUP / EXPORT -->
+    <!-- MODAL: DATA EXPORT & IMPORT -->
     <div id="backupModal"
         class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-5">
             <div class="flex justify-between items-center">
                 <h3 class="font-bold text-lg text-slate-100 flex items-center space-x-2">
                     <i data-lucide="database" class="w-5 h-5 text-blue-500"></i>
-                    <span>Daten & Backup</span>
+                    <span>Data & Backup</span>
                 </h3>
                 <button onclick="closeModal('backupModal')" class="p-1 rounded-lg hover:bg-slate-800 text-slate-400">
                     <i data-lucide="x" class="w-5 h-5"></i>
@@ -387,18 +355,18 @@
             <div class="space-y-3">
                 <button onclick="exportCSV()"
                     class="w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-medium text-sm flex items-center justify-between transition-colors">
-                    <span>CSV-Datei exportieren</span>
+                    <span>Export CSV File</span>
                     <i data-lucide="download" class="w-4 h-4 text-blue-400"></i>
                 </button>
 
                 <button onclick="exportJSON()"
                     class="w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-medium text-sm flex items-center justify-between transition-colors">
-                    <span>JSON-Backup herunterladen</span>
+                    <span>Download JSON Backup</span>
                     <i data-lucide="file-json" class="w-4 h-4 text-indigo-400"></i>
                 </button>
 
                 <div class="border-t border-slate-800 pt-3">
-                    <label class="block text-xs text-slate-400 mb-2">JSON-Backup wiederherstellen:</label>
+                    <label class="block text-xs text-slate-400 mb-2">Restore JSON Backup:</label>
                     <input type="file" id="importJsonInput" accept=".json" onchange="importJSON(event)"
                         class="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer">
                 </div>
@@ -407,16 +375,16 @@
             <div class="border-t border-slate-800 pt-3">
                 <button onclick="resetData()"
                     class="w-full py-2.5 px-4 bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-800/50 rounded-xl font-medium text-xs transition-colors">
-                    Alle Daten zurücksetzen
+                    Reset All Profile Data
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- TOAST NOTIFICATION CONTAINER -->
+    <!-- TOAST NOTIFICATIONS -->
     <div id="toastContainer" class="fixed top-16 right-4 z-50 space-y-2 pointer-events-none"></div>
 
-    <!-- SCRIPT MODULES -->
+    <!-- SCRIPT INCLUSION (STRICT ORDER IN SAME DIRECTORY) -->
     <script src="config.js"></script>
     <script src="utils.js"></script>
     <script src="timer.js"></script>

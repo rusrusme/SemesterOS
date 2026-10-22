@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="de" class="dark">
+<html lang="en" class="dark">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SemesterOS - Smartes Studium-Tracking</title>
+    <title>SemesterOS - Smart Academic Tracker</title>
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,7 +13,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 
     <script>
-        // Falls bereits ein User angemeldet ist -> direkt ins Dashboard
+        // Redirect to app if already logged in
         if (localStorage.getItem('studytrack_current_user')) {
             window.location.href = 'app.html';
         }
@@ -38,7 +38,7 @@
         <a href="login.html"
             class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition-all shadow-md shadow-blue-600/20 flex items-center space-x-1.5">
             <i data-lucide="log-in" class="w-4 h-4"></i>
-            <span>Anmelden</span>
+            <span>Sign In</span>
         </a>
     </header>
 
@@ -48,25 +48,26 @@
         <div
             class="inline-flex items-center space-x-2 bg-blue-950/80 border border-blue-800/50 px-3 py-1 rounded-full text-xs text-blue-400 font-medium mx-auto">
             <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-            <span>100% Kostenlos & Offline im Browser</span>
+            <span>100% Free & Offline Browser Storage</span>
         </div>
 
         <h1 class="text-4xl sm:text-6xl font-black text-slate-100 tracking-tight leading-tight">
-            Meistere dein Semester <br>
-            <span class="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">ohne
-                Stress & Chaos</span>
+            Master Your Semester <br>
+            <span
+                class="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">Without
+                Chaos or Stress</span>
         </h1>
 
         <p class="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-            SemesterOS hilft dir, Lernzeiten, Wochenziele und ECTS-Fortschritte transparent zu verfolgen. Keine
-            Registrierung nötig.
+            SemesterOS helps you organize your degree, manage semesters, track study hours, and meet weekly ECTS goals
+            effortlessly.
         </p>
 
         <!-- CTA BUTTONS -->
         <div class="flex flex-col sm:flex-row justify-center items-center gap-3 pt-2">
             <a href="login.html"
                 class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-2xl shadow-xl shadow-blue-600/25 flex items-center justify-center space-x-2 text-base transition-all active:scale-[0.99]">
-                <span>Jetzt Starten</span>
+                <span>Get Started Now</span>
                 <i data-lucide="arrow-right" class="w-5 h-5"></i>
             </a>
         </div>
@@ -75,29 +76,28 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left pt-12">
             <div class="p-5 bg-slate-900 border border-slate-800 rounded-2xl space-y-2">
                 <div class="w-9 h-9 rounded-lg bg-blue-950 text-blue-400 flex items-center justify-center">
-                    <i data-lucide="zap" class="w-5 h-5"></i>
+                    <i data-lucide="layers" class="w-5 h-5"></i>
                 </div>
-                <h3 class="font-bold text-slate-200 text-sm">Schnellerfassung & Timer</h3>
-                <p class="text-xs text-slate-400">Trage deine Stunden per Klick ein oder stoppe Lerneinheiten live mit
-                    dem Timer.</p>
+                <h3 class="font-bold text-slate-200 text-sm">3-Level Hierarchy</h3>
+                <p class="text-xs text-slate-400">Organize by Degree $\rightarrow$ Semesters $\rightarrow$ Modules
+                    seamlessly.</p>
             </div>
 
             <div class="p-5 bg-slate-900 border border-slate-800 rounded-2xl space-y-2">
                 <div class="w-9 h-9 rounded-lg bg-indigo-950 text-indigo-400 flex items-center justify-center">
-                    <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                    <i data-lucide="timer" class="w-5 h-5"></i>
                 </div>
-                <h3 class="font-bold text-slate-200 text-sm">ECTS & Wochen-Soll</h3>
-                <p class="text-xs text-slate-400">Automatische Auswertung für deine Kalenderwochen und das
-                    Gesamtsortiment.</p>
+                <h3 class="font-bold text-slate-200 text-sm">Quick Track & Timer</h3>
+                <p class="text-xs text-slate-400">Log study sessions in seconds or track live study hours with the
+                    integrated timer.</p>
             </div>
 
             <div class="p-5 bg-slate-900 border border-slate-800 rounded-2xl space-y-2">
                 <div class="w-9 h-9 rounded-lg bg-emerald-950 text-emerald-400 flex items-center justify-center">
                     <i data-lucide="shield-check" class="w-5 h-5"></i>
                 </div>
-                <h3 class="font-bold text-slate-200 text-sm">100% Datenschutz</h3>
-                <p class="text-xs text-slate-400">Alle Daten bleiben lokal im LocalStorage deines Browsers gespeichert.
-                </p>
+                <h3 class="font-bold text-slate-200 text-sm">Private & Local</h3>
+                <p class="text-xs text-slate-400">All data stays strictly local in your browser's LocalStorage.</p>
             </div>
         </div>
 
@@ -105,7 +105,7 @@
 
     <!-- FOOTER -->
     <footer class="border-t border-slate-800/60 py-4 text-center text-xs text-slate-500">
-        SemesterOS • Open Source Semester Manager
+        SemesterOS • Open Source Academic Management System
     </footer>
 
     <script>

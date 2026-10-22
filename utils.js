@@ -14,24 +14,15 @@ function getCurrentISOWeek() {
 function initDateInput() {
     const today = new Date().toISOString().split('T')[0];
     const el = document.getElementById('sessionDate');
-    if (el) {
-        el.value = today;
-        el.addEventListener('click', () => {
-            try {
-                el.showPicker();
-            } catch (e) {
-                // Fallback for older browsers
-            }
-        });
-    }
+    if (el) el.value = today;
 }
 
 function updateKwDisplay() {
     const el = document.getElementById('sessionDate');
     if (el && el.value) {
-        const week = getISOWeek(new Date(el.value));
+        const kw = getISOWeek(new Date(el.value));
         const badge = document.getElementById('kwBadge');
-        if (badge) badge.innerText = `Week ${week}`;
+        if (badge) badge.innerText = `KW ${kw}`;
     }
 }
 
@@ -41,12 +32,30 @@ function refreshIcons() {
     }
 }
 
-function toggleTheme() {
-    document.documentElement.classList.toggle('dark');
-}
-
 function openModal(id) { document.getElementById(id)?.classList.remove('hidden'); }
 function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
+
+function logout() {
+    localStorage.removeItem('studytrack_current_user');
+    window.location.href = 'index.html';
+}
+
+function displayCurrentUser() {
+    const user = localStorage.getItem('studytrack_current_user');
+    const el = document.getElementById('currentUserDisplay');
+    if (el && user) {
+        el.innerText = user;
+    }
+}
+
+function updateTopBarContext() {
+    const deg = getActiveDegree();
+    const sem = getActiveSemester();
+    const el = document.getElementById('topBarContext');
+    if (el && deg && sem) {
+        el.innerText = `${sem.name} • ${deg.name}`;
+    }
+}
 
 // --- TOAST NOTIFICATIONS ---
 function showToast(message, type = "info") {
@@ -68,18 +77,4 @@ function showToast(message, type = "info") {
         toast.classList.add('opacity-0', 'translate-y-2');
         setTimeout(() => toast.remove(), 300);
     }, 2500);
-}
-
-// --- USER MANAGEMENT & LOGOUT ---
-function logout() {
-    localStorage.removeItem('studytrack_current_user');
-    window.location.href = 'index.html';
-}
-
-function displayCurrentUser() {
-    const user = localStorage.getItem('studytrack_current_user');
-    const el = document.getElementById('currentUserDisplay');
-    if (el && user) {
-        el.innerText = user;
-    }
 }

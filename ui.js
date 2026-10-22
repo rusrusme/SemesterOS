@@ -1,17 +1,30 @@
 let chartModulesInstance = null;
 let chartCategoriesInstance = null;
 
-// --- MODUL CARDS ---
+// --- MODULE TOUCH CARDS ---
 function renderModuleCards() {
     const container = document.getElementById('moduleCardsContainer');
     if (!container) return;
 
-    if (state.modules.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-500 col-span-3 py-4 text-center">Keine Module vorhanden. Lege welche im Setup an.</p>`;
+    const modules = getActiveModules();
+
+    if (modules.length === 0) {
+        container.innerHTML = `
+            <div class="col-span-2 sm:col-span-3 p-4 bg-slate-900 border border-slate-800 rounded-xl text-center space-y-2">
+                <p class="text-xs text-slate-400">No modules found for your current selection.</p>
+                <button onclick="switchTab('setup')" class="px-3 py-1.5 bg-blue-600 text-white font-semibold text-xs rounded-lg hover:bg-blue-500 transition-colors">
+                    Go to Setup & Add Modules
+                </button>
+            </div>
+        `;
         return;
     }
 
-    container.innerHTML = state.modules.map(m => {
+    if (!modules.some(m => m.id === state.selectedModuleId)) {
+        state.selectedModuleId = modules[0].id;
+    }
+
+    container.innerHTML = modules.map(m => {
         const isSelected = m.id === state.selectedModuleId;
         return `
   <button type="button" onclick="selectModule('${m.id}')" 
@@ -21,11 +34,11 @@ function renderModuleCards() {
             }">
     <div class="flex justify-between items-start">
       <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${m.color || '#3b82f6'}"></span>
-      <span class="text-[10px] font-semibold text-slate-400">${m.ects} ECTS</span>
+      <span class="text-[10px] font-semibold text-slate-400">${m.ects} ECTS (${m.sws || 0} SWS)</span>
     </div>
     <div class="mt-2">
       <h4 class="font-bold text-xs text-slate-200 truncate">${m.name}</h4>
-      <p class="text-[10px] text-slate-400 mt-0.5">${m.targetWeekly} h/Week</p>
+      <p class="text-[10px] text-slate-400 mt-0.5">${m.targetWeekly} hrs/week</p>
     </div>
   </button>`;
     }).join('');
@@ -41,22 +54,22 @@ function setQuickDuration(val) {
     const range = document.getElementById('durationRange');
     const disp = document.getElementById('durationDisplay');
     if (range) range.value = val;
-    if (disp) disp.innerText = `${val.toFixed(1)} Std.`;
+    if (disp) disp.innerText = `${val.toFixed(1)} hrs`;
 
     document.querySelectorAll('.duration-btn').forEach(btn => {
         btn.classList.remove('bg-blue-600', 'border-blue-500', 'text-white', 'shadow');
         btn.classList.add('bg-slate-900', 'border-slate-800', 'text-slate-300');
     });
-    if (event && event.currentTarget) {
-        event.currentTarget.classList.remove('bg-slate-900', 'border-slate-800', 'text-slate-300');
-        event.currentTarget.classList.add('bg-blue-600', 'border-blue-500', 'text-white', 'shadow');
+    if (window.event && window.event.currentTarget) {
+        window.event.currentTarget.classList.remove('bg-slate-900', 'border-slate-800', 'text-slate-300');
+        window.event.currentTarget.classList.add('bg-blue-600', 'border-blue-500', 'text-white', 'shadow');
     }
 }
 
 function updateDurationFromRange(val) {
     state.selectedDuration = parseFloat(val);
     const disp = document.getElementById('durationDisplay');
-    if (disp) disp.innerText = `${state.selectedDuration.toFixed(1)} Std.`;
+    if (disp) disp.innerText = `${state.selectedDuration.toFixed(1)} hrs`;
 }
 
 function selectCategory(cat) {
@@ -73,13 +86,18 @@ function selectCategory(cat) {
 }
 
 function saveSession() {
-    const dateInput = document.getElementById('sessionDate');
-    if (!dateInput || !dateInput.value) {
-        showToast("Bitte wähle ein Datum aus.", "error");
+    if (!state.selectedModuleId) {
+        showToast("Please select a module first or create one in Setup.", "error");
         return;
     }
 
-    const week = getISOWeek(new Date(dateInput.value));
+    const dateInput = document.getElementById('sessionDate');
+    if (!dateInput || !dateInput.value) {
+        showToast("Please select a date.", "error");
+        return;
+    }
+
+    const kw = getISOWeek(new Date(dateInput.value));
     const noteVal = (document.getElementById('sessionNote')?.value || '').trim();
 
     const newSession = {
@@ -88,21 +106,22 @@ function saveSession() {
         duration: state.selectedDuration,
         category: state.selectedCategory,
         date: dateInput.value,
-        week: week,
+        kw: kw,
         note: noteVal
     };
 
     state.sessions.unshift(newSession);
     saveState();
 
-    const mod = state.modules.find(m => m.id === state.selectedModuleId);
-    showToast(`${newSession.duration}h für ${mod ? mod.name : ''} gespeichert!`, "success");
+    const modules = getActiveModules();
+    const mod = modules.find(m => m.id === state.selectedModuleId);
+    showToast(`Saved ${newSession.duration}h for ${mod ? mod.name : 'Module'}!`, "success");
 
     const noteInput = document.getElementById('sessionNote');
     if (noteInput) noteInput.value = '';
 }
 
-// --- WOCHEN DASHBOARD ---
+// --- WEEKLY DASHBOARD ---
 function changeKw(delta) {
     state.currentKw = Math.max(1, Math.min(53, state.currentKw + delta));
     renderWeeklyDashboard();
@@ -110,38 +129,49 @@ function changeKw(delta) {
 
 function renderWeeklyDashboard() {
     const title = document.getElementById('weeklyKwTitle');
-    if (title) title.innerText = `Kalenderwoche ${state.currentKw}`;
+    if (title) title.innerText = `Calendar Week ${state.currentKw}`;
 
-    const kwSessions = state.sessions.filter(s => s.week === state.currentKw);
+    const modules = getActiveModules();
+    const kwSessions = state.sessions.filter(s => s.kw === state.currentKw);
     const totalIst = kwSessions.reduce((sum, s) => sum + s.duration, 0);
-    const totalSoll = state.modules.reduce((sum, m) => sum + m.targetWeekly, 0) || 42.0;
-    const pct = Math.min(100, Math.round((totalIst / totalSoll) * 100));
+    const totalSoll = modules.reduce((sum, m) => sum + m.targetWeekly, 0) || 0;
+    const pct = totalSoll > 0 ? Math.min(100, Math.round((totalIst / totalSoll) * 100)) : 0;
 
     const totalIstDisp = document.getElementById('weeklyTotalIst');
+    const totalSollDisp = document.getElementById('weeklyTotalSoll');
     const totalBar = document.getElementById('weeklyTotalBar');
     if (totalIstDisp) totalIstDisp.innerText = `${totalIst.toFixed(1)} h`;
+    if (totalSollDisp) totalSollDisp.innerText = `/ ${totalSoll.toFixed(1)} h`;
     if (totalBar) totalBar.style.width = `${pct}%`;
 
     const badge = document.getElementById('weeklyStatusBadge');
     if (badge) {
-        if (pct >= 100) {
-            badge.innerText = "Ziel Erreicht!";
+        if (totalSoll === 0) {
+            badge.innerText = "No Target Set";
+            badge.className = "px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-400";
+        } else if (pct >= 100) {
+            badge.innerText = "Target Reached!";
             badge.className = "px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800/50";
         } else if (pct >= 70) {
-            badge.innerText = "Auf Kurs";
+            badge.innerText = "On Track";
             badge.className = "px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-950 text-blue-400 border border-blue-800/50";
         } else {
-            badge.innerText = "Rückstand";
+            badge.innerText = "Behind Schedule";
             badge.className = "px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-950 text-amber-400 border border-amber-800/50";
         }
     }
 
     const listContainer = document.getElementById('weeklyModuleList');
     if (listContainer) {
-        listContainer.innerHTML = state.modules.map(m => {
+        if (modules.length === 0) {
+            listContainer.innerHTML = `<p class="text-xs text-slate-500 py-2">No modules available in this semester.</p>`;
+            return;
+        }
+
+        listContainer.innerHTML = modules.map(m => {
             const modSessions = kwSessions.filter(s => s.moduleId === m.id);
             const modIst = modSessions.reduce((sum, s) => sum + s.duration, 0);
-            const modPct = Math.min(100, Math.round((modIst / m.targetWeekly) * 100));
+            const modPct = m.targetWeekly > 0 ? Math.min(100, Math.round((modIst / m.targetWeekly) * 100)) : 0;
 
             let colorClass = "bg-amber-500";
             if (modPct >= 100) colorClass = "bg-emerald-500";
@@ -167,28 +197,26 @@ function renderWeeklyDashboard() {
     }
 }
 
-// --- STATISTIKEN & CHARTS ---
+// --- STATS & CHARTS ---
 function renderSemesterStats() {
+    const modules = getActiveModules();
     const totalIst = state.sessions.reduce((sum, s) => sum + s.duration, 0);
-    const totalEcts = state.modules.reduce((sum, m) => sum + m.ects, 0) || 30;
+    const totalEcts = modules.reduce((sum, m) => sum + m.ects, 0) || 0;
     const totalSoll = totalEcts * 30;
-    const pct = Math.min(100, Math.round((totalIst / totalSoll) * 100));
+    const pct = totalSoll > 0 ? Math.min(100, Math.round((totalIst / totalSoll) * 100)) : 0;
 
-    const totalDisp = document.getElementById('semIstTotal');
-    const percentDisp = document.getElementById('semIstPercent');
     const bar = document.getElementById('semProgressBar');
     const barLabel = document.getElementById('semProgressBarLabel');
 
-    if (totalDisp) totalDisp.innerText = `${totalIst.toFixed(1)} h`;
-    if (percentDisp) percentDisp.innerText = `${pct}% erreicht`;
     if (bar) bar.style.width = `${pct}%`;
-    if (barLabel) barLabel.innerText = `${pct}%`;
+    if (barLabel) barLabel.innerText = `${pct}% (${totalIst.toFixed(1)} / ${totalSoll} h)`;
 
     renderCharts();
 }
 
 function renderCharts() {
-    const moduleTotals = state.modules.map(m => {
+    const modules = getActiveModules();
+    const moduleTotals = modules.map(m => {
         return state.sessions
             .filter(s => s.moduleId === m.id)
             .reduce((sum, s) => sum + s.duration, 0);
@@ -202,10 +230,10 @@ function renderCharts() {
         chartModulesInstance = new Chart(ctxModules, {
             type: 'doughnut',
             data: {
-                labels: state.modules.map(m => m.name),
+                labels: modules.length > 0 ? modules.map(m => m.name) : ['No Modules'],
                 datasets: [{
-                    data: moduleTotals,
-                    backgroundColor: state.modules.map(m => m.color || '#3b82f6'),
+                    data: modules.length > 0 ? moduleTotals : [1],
+                    backgroundColor: modules.length > 0 ? modules.map(m => m.color || '#3b82f6') : ['#334155'],
                     borderWidth: 0
                 }]
             },
@@ -217,7 +245,7 @@ function renderCharts() {
         });
     }
 
-    const categories = ['Selbststudium', 'Präsenzzeit', 'Nachbereitung'];
+    const categories = ['Self-Study', 'Attendance', 'Preparation'];
     const catColors = ['#3b82f6', '#10b981', '#f59e0b'];
     const categoryTotals = categories.map(cat => {
         return state.sessions
@@ -249,12 +277,14 @@ function renderCharts() {
     }
 }
 
-// --- VERLAUF & HISTORIE ---
+// --- HISTORY LOGS ---
 function renderHistoryModuleFilter() {
     const select = document.getElementById('historyModuleFilter');
     if (!select) return;
-    select.innerHTML = `<option value="ALL">Alle Module</option>` +
-        state.modules.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+
+    const modules = getActiveModules();
+    select.innerHTML = `<option value="ALL">All Modules</option>` +
+        modules.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
 }
 
 function renderHistory() {
@@ -273,12 +303,13 @@ function renderHistory() {
     if (!listContainer) return;
 
     if (filtered.length === 0) {
-        listContainer.innerHTML = `<p class="text-xs text-slate-500 text-center py-8">Keine Lerneinheiten gefunden.</p>`;
+        listContainer.innerHTML = `<p class="text-xs text-slate-500 text-center py-8">No study sessions logged yet.</p>`;
         return;
     }
 
+    const modules = getActiveModules();
     listContainer.innerHTML = filtered.map(s => {
-        const mod = state.modules.find(m => m.id === s.moduleId) || { name: 'Unbekannt', color: '#64748b' };
+        const mod = modules.find(m => m.id === s.moduleId) || { name: 'Unknown', color: '#64748b' };
         return `
   <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between space-x-3">
     <div class="flex items-center space-x-3 min-w-0">
@@ -286,7 +317,7 @@ function renderHistory() {
       <div class="min-w-0">
         <div class="flex items-center space-x-2">
           <h5 class="text-xs font-bold text-slate-200 truncate">${mod.name}</h5>
-          <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">Week ${s.week}</span>
+          <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">CW ${s.kw}</span>
         </div>
         <p class="text-[11px] text-slate-400 truncate mt-0.5">${s.date} • ${s.category}${s.note ? ' • ' + s.note : ''}</p>
       </div>
@@ -304,99 +335,271 @@ function renderHistory() {
 }
 
 function deleteSession(id) {
-    if (confirm("Lerneinheit wirklich löschen?")) {
+    if (confirm("Delete this study session?")) {
         state.sessions = state.sessions.filter(s => s.id !== id);
         saveState();
         renderHistory();
-        showToast("Lerneinheit gelöscht.", "info");
+        showToast("Session deleted.", "info");
     }
 }
 
-// --- MODUL-VERWALTUNG (SETUP) ---
+// --- SETUP TAB (DEGREE -> SEMESTER -> MODULE HIERARCHY) ---
+function renderDegreeSemesterManagement() {
+    const container = document.getElementById('degreeSemesterManagementContainer');
+    if (!container) return;
+
+    const activeDeg = getActiveDegree();
+    const activeSem = getActiveSemester();
+
+    container.innerHTML = `
+        <!-- 1. DEGREE SELECTION & CREATION -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+            <h3 class="font-bold text-sm text-slate-100 flex items-center space-x-2">
+                <i data-lucide="award" class="w-4 h-4 text-blue-500"></i>
+                <span>1. Degree Program</span>
+            </h3>
+
+            ${state.degrees.length > 0 ? `
+            <div class="flex gap-2">
+                <select id="degreeSelect" onchange="switchDegree(this.value)" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                    ${state.degrees.map(d => `<option value="${d.id}" ${d.id === state.activeDegreeId ? 'selected' : ''}>${d.name}</option>`).join('')}
+                </select>
+            </div>
+            ` : `<p class="text-xs text-slate-400">No degree program created yet. Add one below to get started.</p>`}
+
+            <div class="flex gap-2 pt-2 border-t border-slate-800/80">
+                <input type="text" id="newDegreeName" placeholder="Degree Name (e.g. Computer Science)" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200">
+                <button onclick="addCustomDegree()" class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold">Add Degree</button>
+            </div>
+        </div>
+
+        <!-- 2. SEMESTER SELECTION & CREATION -->
+        ${activeDeg ? `
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+            <h3 class="font-bold text-sm text-slate-100 flex items-center space-x-2">
+                <i data-lucide="calendar" class="w-4 h-4 text-indigo-500"></i>
+                <span>2. Semesters in ${activeDeg.name}</span>
+            </h3>
+
+            ${activeDeg.semesters && activeDeg.semesters.length > 0 ? `
+            <div class="flex gap-2">
+                <select id="semesterSelect" onchange="switchSemester(this.value)" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                    ${activeDeg.semesters.map(s => `<option value="${s.id}" ${s.id === state.activeSemesterId ? 'selected' : ''}>${s.name}</option>`).join('')}
+                </select>
+            </div>
+            ` : `<p class="text-xs text-slate-400">No semesters in this degree yet. Add your first semester below.</p>`}
+
+            <div class="flex gap-2 pt-2 border-t border-slate-800/80">
+                <input type="text" id="newSemesterName" placeholder="Semester Name (e.g. 1st Semester)" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200">
+                <button onclick="addCustomSemester()" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold">Add Semester</button>
+            </div>
+        </div>
+        ` : ''}
+
+        <!-- 3. MODULES MANAGEMENT -->
+        ${activeSem ? `
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+            <h3 class="font-bold text-sm text-slate-100 flex items-center space-x-2">
+                <i data-lucide="book-open" class="w-4 h-4 text-emerald-500"></i>
+                <span>3. Modules in ${activeSem.name}</span>
+            </h3>
+
+            <!-- MODULE LIST WITH CLICKABLE COLOR DOTS -->
+            <div id="settingsModuleList" class="space-y-2">
+                ${activeSem.modules && activeSem.modules.length > 0 ? activeSem.modules.map(m => `
+                    <div class="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <!-- CLICKABLE COLOR CIRCLE -->
+                                <button type="button" onclick="toggleModuleColorPicker('${m.id}')"
+                                    class="w-4 h-4 rounded-full border border-slate-700 hover:scale-125 transition-transform flex-shrink-0 relative group"
+                                    style="background-color: ${m.color || '#3b82f6'}" title="Click to change color">
+                                </button>
+                                <div>
+                                    <p class="text-xs font-bold text-slate-200">${m.name}</p>
+                                    <p class="text-[10px] text-slate-400">${m.ects} ECTS • ${m.sws || 0} SWS • ${m.targetWeekly} hrs/week</p>
+                                </div>
+                            </div>
+                            <button onclick="deleteCustomModule('${m.id}')" class="p-1.5 text-slate-500 hover:text-red-400 transition-colors">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+
+                        <!-- INLINE COLOR PALETTE FOR THIS MODULE -->
+                        ${state.editingColorModuleId === m.id ? `
+                            <div class="flex items-center gap-2 pt-2 border-t border-slate-800/80 flex-wrap">
+                                <span class="text-[10px] text-slate-400 font-medium">Select Color:</span>
+                                ${PRESET_COLORS.map(c => `
+                                    <button type="button" onclick="changeModuleColor('${m.id}', '${c}')"
+                                        class="w-5 h-5 rounded-full border ${m.color === c ? 'border-white ring-2 ring-blue-500/50 scale-110' : 'border-transparent hover:scale-110 opacity-80'}"
+                                        style="background-color: ${c}">
+                                    </button>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('') : `<p class="text-xs text-slate-500 py-2">No modules added to this semester yet.</p>`}
+            </div>
+
+            <!-- ADD NEW MODULE (BOTTOM PALETTE REMOVED) -->
+            <div class="pt-3 border-t border-slate-800/80 space-y-3">
+                <h4 class="text-xs font-semibold text-slate-400">Add New Module</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                    <input type="text" id="newModName" placeholder="Module Name" class="sm:col-span-2 bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200">
+                    <input type="number" id="newModEcts" placeholder="ECTS (e.g. 6)" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200">
+                    <input type="number" id="newModWeekly" placeholder="Hrs/Week" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200">
+                </div>
+                <button onclick="addCustomModule()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center space-x-1.5">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    <span>Save Module</span>
+                </button>
+            </div>
+        </div>
+        ` : ''}
+    `;
+
+    refreshIcons();
+}
+
+function selectNewModuleColor(color) {
+    state.selectedModuleColor = color;
+    renderDegreeSemesterManagement();
+}
+
+function switchDegree(degId) {
+    state.activeDegreeId = degId;
+    const deg = getActiveDegree();
+    if (deg && deg.semesters && deg.semesters.length > 0) {
+        state.activeSemesterId = deg.semesters[0].id;
+    } else {
+        state.activeSemesterId = null;
+    }
+    saveState();
+    updateTopBarContext();
+    renderDegreeSemesterManagement();
+    renderModuleCards();
+}
+
+function switchSemester(semId) {
+    state.activeSemesterId = semId;
+    saveState();
+    updateTopBarContext();
+    renderDegreeSemesterManagement();
+    renderModuleCards();
+}
+
+function addCustomDegree() {
+    const input = document.getElementById('newDegreeName');
+    const name = input ? input.value.trim() : '';
+    if (!name) return;
+
+    const newDeg = {
+        id: 'deg_' + Date.now(),
+        name: name,
+        semesters: []
+    };
+
+    state.degrees.push(newDeg);
+    state.activeDegreeId = newDeg.id;
+    state.activeSemesterId = null;
+    saveState();
+
+    input.value = '';
+    renderDegreeSemesterManagement();
+    updateTopBarContext();
+    renderModuleCards();
+    showToast(`Degree "${name}" created!`, "success");
+}
+
+function addCustomSemester() {
+    const deg = getActiveDegree();
+    if (!deg) return;
+
+    const input = document.getElementById('newSemesterName');
+    const name = input ? input.value.trim() : '';
+    if (!name) return;
+
+    if (!deg.semesters) deg.semesters = [];
+
+    const newSem = {
+        id: 'sem_' + Date.now(),
+        name: name,
+        modules: []
+    };
+
+    deg.semesters.push(newSem);
+    state.activeSemesterId = newSem.id;
+    saveState();
+
+    input.value = '';
+    renderDegreeSemesterManagement();
+    updateTopBarContext();
+    renderModuleCards();
+    showToast(`Semester "${name}" created!`, "success");
+}
+
 function addCustomModule() {
+    const sem = getActiveSemester();
+    if (!sem) return;
+
     const nameInput = document.getElementById('newModName');
     const ectsInput = document.getElementById('newModEcts');
     const weeklyInput = document.getElementById('newModWeekly');
-    const colorInput = document.getElementById('newModColor');
 
     const name = nameInput ? nameInput.value.trim() : '';
     const ects = parseFloat(ectsInput?.value) || 5;
     const weekly = parseFloat(weeklyInput?.value) || 5;
-    const color = colorInput?.value || '#3b82f6';
 
     if (!name) {
-        showToast("Bitte gib einen Modulnamen ein.", "error");
+        showToast("Module name required.", "error");
         return;
     }
+
+    if (!sem.modules) sem.modules = [];
 
     const newModule = {
         id: 'mod_' + Date.now(),
         name: name,
         ects: ects,
+        sws: Math.round(ects * 0.75),
         targetWeekly: weekly,
-        color: color
+        color: state.selectedModuleColor || PRESET_COLORS[0]
     };
 
-    state.modules.push(newModule);
+    sem.modules.push(newModule);
     saveState();
 
-    if (nameInput) nameInput.value = '';
+    // Auto-cycle active selected color for convenience
+    const currentIdx = PRESET_COLORS.indexOf(state.selectedModuleColor);
+    state.selectedModuleColor = PRESET_COLORS[(currentIdx + 1) % PRESET_COLORS.length];
+
+    nameInput.value = '';
+    renderDegreeSemesterManagement();
     renderModuleCards();
-    renderHistoryModuleFilter();
-    renderSettingsModuleList();
-    showToast(`Modul "${name}" hinzugefügt!`, "success");
+    showToast(`Module "${name}" added!`, "success");
 }
 
 function deleteCustomModule(id) {
-    if (confirm("Modul und alle zugehörigen Einträge wirklich löschen?")) {
-        state.modules = state.modules.filter(m => m.id !== id);
+    const sem = getActiveSemester();
+    if (!sem || !sem.modules) return;
+
+    if (confirm("Delete this module?")) {
+        sem.modules = sem.modules.filter(m => m.id !== id);
         state.sessions = state.sessions.filter(s => s.moduleId !== id);
         saveState();
-
-        if (state.selectedModuleId === id && state.modules.length > 0) {
-            state.selectedModuleId = state.modules[0].id;
-        }
-
+        renderDegreeSemesterManagement();
         renderModuleCards();
-        renderHistoryModuleFilter();
-        renderSettingsModuleList();
-        showToast("Modul entfernt.", "info");
+        showToast("Module removed.", "info");
     }
-}
-
-function renderSettingsModuleList() {
-    const container = document.getElementById('settingsModuleList');
-    if (!container) return;
-
-    if (state.modules.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-500 py-2">Keine Module vorhanden.</p>`;
-        return;
-    }
-
-    container.innerHTML = state.modules.map(m => `
-        <div class="flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl">
-            <div class="flex items-center space-x-3">
-                <span class="w-3 h-3 rounded-full" style="background-color: ${m.color || '#3b82f6'}"></span>
-                <div>
-                    <p class="text-xs font-bold text-slate-200">${m.name}</p>
-                    <p class="text-[10px] text-slate-400">${m.ects} ECTS • ${m.targetWeekly} h/Week</p>
-                </div>
-            </div>
-            <button onclick="deleteCustomModule('${m.id}')" class="p-1.5 text-slate-500 hover:text-red-400 transition-colors">
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
-            </button>
-        </div>
-    `).join('');
-
-    refreshIcons();
 }
 
 // --- EXPORT & IMPORT ---
 function exportCSV() {
-    let csv = "ID;Datum;Kalenderwoche;Modul;Kategorie;Dauer_Std;Notiz\n";
+    let csv = "ID;Date;CalendarWeek;Module;Category;Duration_Hrs;Notes\n";
+    const modules = getActiveModules();
     state.sessions.forEach(s => {
-        const mod = state.modules.find(m => m.id === s.moduleId);
-        csv += `"${s.id}";"${s.date}";${s.week};"${mod ? mod.name : s.moduleId}";"${s.category}";${s.duration};"${s.note || ''}"\n`;
+        const mod = modules.find(m => m.id === s.moduleId);
+        csv += `"${s.id}";"${s.date}";${s.kw};"${mod ? mod.name : s.moduleId}";"${s.category}";${s.duration};"${s.note || ''}"\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -427,22 +630,86 @@ function importJSON(event) {
                 state.sessions = imported;
                 saveState();
                 closeModal('backupModal');
-                showToast("Backup erfolgreich geladen!", "success");
+                showToast("Backup restored successfully!", "success");
                 switchTab('quicktrack');
             }
         } catch (err) {
-            showToast("Ungültige JSON-Datei.", "error");
+            showToast("Invalid JSON file.", "error");
         }
     };
     reader.readAsText(file);
 }
 
 function resetData() {
-    if (confirm("Wirklich ALLE gespeicherten Lerneinheiten unwiderruflich löschen?")) {
+    if (confirm("Are you sure you want to reset all profile data?")) {
+        state.degrees = [];
         state.sessions = [];
+        state.activeDegreeId = null;
+        state.activeSemesterId = null;
         saveState();
         closeModal('backupModal');
-        showToast("Alle Daten zurückgesetzt.", "info");
-        switchTab('quicktrack');
+        showToast("Profile data reset.", "info");
+        switchTab('setup');
     }
+}
+
+function toggleModuleColorPicker(id) {
+    state.editingColorModuleId = state.editingColorModuleId === id ? null : id;
+    renderDegreeSemesterManagement();
+}
+
+function changeModuleColor(id, newColor) {
+    const sem = getActiveSemester();
+    if (!sem || !sem.modules) return;
+
+    const mod = sem.modules.find(m => m.id === id);
+    if (mod) {
+        mod.color = newColor;
+        saveState();
+        state.editingColorModuleId = null;
+        renderDegreeSemesterManagement();
+        renderModuleCards();
+        renderWeeklyDashboard();
+        showToast(`Updated color for "${mod.name}"`, "success");
+    }
+}
+
+function addCustomModule() {
+    const sem = getActiveSemester();
+    if (!sem) return;
+
+    const nameInput = document.getElementById('newModName');
+    const ectsInput = document.getElementById('newModEcts');
+    const weeklyInput = document.getElementById('newModWeekly');
+
+    const name = nameInput ? nameInput.value.trim() : '';
+    const ects = parseFloat(ectsInput?.value) || 5;
+    const weekly = parseFloat(weeklyInput?.value) || 5;
+
+    if (!name) {
+        showToast("Module name required.", "error");
+        return;
+    }
+
+    if (!sem.modules) sem.modules = [];
+
+    // Auto-assign a unique color from PRESET_COLORS based on current module count
+    const assignedColor = PRESET_COLORS[sem.modules.length % PRESET_COLORS.length];
+
+    const newModule = {
+        id: 'mod_' + Date.now(),
+        name: name,
+        ects: ects,
+        sws: Math.round(ects * 0.75),
+        targetWeekly: weekly,
+        color: assignedColor
+    };
+
+    sem.modules.push(newModule);
+    saveState();
+
+    nameInput.value = '';
+    renderDegreeSemesterManagement();
+    renderModuleCards();
+    showToast(`Module "${name}" added!`, "success");
 }
