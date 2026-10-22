@@ -1,0 +1,22 @@
+/* Custom scrollbar & mobile styling */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+}
+
+body {
+    -webkit-tap-highlight-color: transparent;
+}
+
+.pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 5rem);
+}

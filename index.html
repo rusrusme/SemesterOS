@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SemesterOS - Semester Manager</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Eigene CSS-Datei -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body
+    class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-blue-500 selection:text-white flex flex-col">
+
+    <!-- TOP HEADER -->
+    <header
+        class="sticky top-0 z-30 bg-slate-900/90 backdrop-blur border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div
+                class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <i data-lucide="graduation-cap" class="w-5 h-5 text-white"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-base leading-none text-slate-100">SemesterOS</h1>
+                <p class="text-xs text-slate-400 mt-0.5">29 ECTS • Semester Manager</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <button onclick="openModal('backupModal')"
+                class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                title="Daten Export/Import">
+                <i data-lucide="database" class="w-4 h-4"></i>
+            </button>
+            <button id="themeToggleBtn" onclick="toggleTheme()"
+                class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                title="Design wechseln">
+                <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+                <i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-1 max-w-4xl w-full mx-auto p-4 pb-24">
+
+        <!-- TAB 1: SCHNELLERFASSUNG & TIMER -->
+        <section id="tab-quicktrack" class="tab-content space-y-6">
+
+            <!-- Sub-navigation: Quick Input vs. Timer -->
+            <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
+                <button id="mode-quick-btn" onclick="switchTrackerMode('quick')"
+                    class="flex-1 py-2 text-xs sm:text-sm font-medium rounded-lg bg-blue-600 text-white shadow transition-all flex items-center justify-center space-x-2">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                    <span>Schnellerfassung</span>
+                </button>
+                <button id="mode-timer-btn" onclick="switchTrackerMode('timer')"
+                    class="flex-1 py-2 text-xs sm:text-sm font-medium rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center space-x-2">
+                    <i data-lucide="timer" class="w-4 h-4"></i>
+                    <span>Live-Stoppuhr</span>
+                </button>
+            </div>
+
+            <!-- MODE A: QUICK TRACK FORM -->
+            <div id="quick-track-container" class="space-y-6">
+                <!-- Modul-Auswahl (Touch Cards) -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">1. Modul
+                        auswählen</label>
+                    <div id="moduleCardsContainer" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                        <!-- Cards will be generated via JS -->
+                    </div>
+                </div>
+
+                <!-- Schnellwahl Dauer -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">2. Dauer
+                            (Stunden)</label>
+                        <span id="durationDisplay"
+                            class="text-sm font-bold text-blue-400 bg-blue-950/60 border border-blue-800/50 px-2.5 py-0.5 rounded-full">1.5
+                            Std.</span>
+                    </div>
+                    <div class="grid grid-cols-5 gap-1.5 mb-3">
+                        <button type="button" onclick="setQuickDuration(0.5)"
+                            class="duration-btn py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg text-xs font-semibold text-slate-300 transition-all">+0.5h</button>
+                        <button type="button" onclick="setQuickDuration(1.0)"
+                            class="duration-btn py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg text-xs font-semibold text-slate-300 transition-all">+1.0h</button>
+                        <button type="button" onclick="setQuickDuration(1.5)"
+                            class="duration-btn py-2 bg-blue-600 border border-blue-500 rounded-lg text-xs font-semibold text-white shadow transition-all">+1.5h</button>
+                        <button type="button" onclick="setQuickDuration(2.0)"
+                            class="duration-btn py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg text-xs font-semibold text-slate-300 transition-all">+2.0h</button>
+                        <button type="button" onclick="setQuickDuration(3.0)"
+                            class="duration-btn py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg text-xs font-semibold text-slate-300 transition-all">+3.0h</button>
+                    </div>
+                    <input type="range" id="durationRange" min="0.25" max="8.0" step="0.25" value="1.5"
+                        oninput="updateDurationFromRange(this.value)"
+                        class="w-full accent-blue-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                </div>
+
+                <!-- Kategorie -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">3.
+                        Kategorie</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" onclick="selectCategory('Selbststudium')" id="cat-Selbststudium"
+                            class="cat-btn py-2.5 px-2 bg-blue-600 text-white border border-blue-500 rounded-xl text-xs font-medium text-center transition-all">Selbststudium</button>
+                        <button type="button" onclick="selectCategory('Präsenzzeit')" id="cat-Präsenzzeit"
+                            class="cat-btn py-2.5 px-2 bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 rounded-xl text-xs font-medium text-center transition-all">Präsenzzeit</button>
+                        <button type="button" onclick="selectCategory('Nachbereitung')" id="cat-Nachbereitung"
+                            class="cat-btn py-2.5 px-2 bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 rounded-xl text-xs font-medium text-center transition-all">Nachbereitung</button>
+                    </div>
+                </div>
+
+                <!-- Datum & Notiz -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Datum &
+                            KW</label>
+                        <div class="relative">
+                            <input type="date" id="sessionDate" onchange="updateKwDisplay()"
+                                class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                            <span id="kwBadge"
+                                class="absolute right-3 top-3 text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md">KW
+                                --</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Thema /
+                            Notiz (optional)</label>
+                        <input type="text" id="sessionNote" placeholder="z.B. Übungsblatt 4, Tutorium..."
+                            class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-blue-500 placeholder-slate-600">
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button onclick="saveSession()"
+                    class="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-2xl shadow-lg shadow-blue-600/25 flex items-center justify-center space-x-2 text-base active:scale-[0.99] transition-all">
+                    <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+                    <span>Lerneinheit Speichern</span>
+                </button>
+            </div>
+
+            <!-- MODE B: LIVE TIMER -->
+            <div id="timer-container" class="hidden space-y-6">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center space-y-4">
+                    <div id="timerDisplay" class="text-5xl font-mono font-bold tracking-wider text-blue-400">00:00:00
+                    </div>
+
+                    <div class="flex justify-center space-x-3">
+                        <button id="startTimerBtn" onclick="toggleTimer()"
+                            class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg flex items-center space-x-2">
+                            <i data-lucide="play" class="w-5 h-5"></i>
+                            <span>Start</span>
+                        </button>
+                        <button onclick="resetTimer()"
+                            class="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl flex items-center space-x-1">
+                            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                            <span>Reset</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-slate-900/60 border border-slate-800/80 rounded-xl">
+                    <p class="text-xs text-slate-400 text-center">Gestartete Zeit wird beim Stoppen direkt als Dauer in
+                        die Schnellerfassung übernommen.</p>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- TAB 2: WOCHEN-DASHBOARD -->
+        <section id="tab-weekly" class="tab-content hidden space-y-6">
+
+            <!-- KW Selector Header -->
+            <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-3 rounded-2xl">
+                <button onclick="changeKw(-1)"
+                    class="p-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                </button>
+                <div class="text-center">
+                    <span id="weeklyKwTitle" class="font-bold text-base text-slate-100">Kalenderwoche --</span>
+                    <p id="weeklyKwSubtitle" class="text-xs text-slate-400">Soll: 42 Std. / Woche</p>
+                </div>
+                <button onclick="changeKw(1)"
+                    class="p-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Weekly Total Progress Gauge Card -->
+            <div
+                class="bg-gradient-to-br from-slate-900 to-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-3">
+                <div class="flex justify-between items-end">
+                    <div>
+                        <span
+                            class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Wochen-Fortschritt</span>
+                        <div class="flex items-baseline space-x-2 mt-0.5">
+                            <span id="weeklyTotalIst" class="text-2xl font-bold text-slate-100">0.0 h</span>
+                            <span id="weeklyTotalSoll" class="text-sm text-slate-400">/ 42.0 h</span>
+                        </div>
+                    </div>
+                    <span id="weeklyStatusBadge"
+                        class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300">In
+                        Bearbeitung</span>
+                </div>
+
+                <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
+                    <div id="weeklyTotalBar" class="h-full bg-blue-500 rounded-full transition-all duration-500"
+                        style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Modules Soll vs Ist Breakdown -->
+            <div class="space-y-3">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1">Modul-Übersicht (Diese
+                    KW)</h3>
+                <div id="weeklyModuleList" class="space-y-2.5">
+                    <!-- Generated via JS -->
+                </div>
+            </div>
+
+        </section>
+
+        <!-- TAB 3: SEMESTER-STATISTIK -->
+        <section id="tab-semester" class="tab-content hidden space-y-6">
+
+            <!-- KPI Overview Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                    <span class="text-xs text-slate-400 font-medium">Soll Gesamt</span>
+                    <p class="text-xl font-bold text-slate-100 mt-1">870 h</p>
+                    <span class="text-[10px] text-slate-500">29 ECTS × 30h</span>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                    <span class="text-xs text-slate-400 font-medium">Gelernt Gesamt</span>
+                    <p id="semIstTotal" class="text-xl font-bold text-blue-400 mt-1">0 h</p>
+                    <span id="semIstPercent" class="text-[10px] text-blue-500 font-medium">0% erreicht</span>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                    <span class="text-xs text-slate-400 font-medium">Soll VL-Zeit</span>
+                    <p class="text-xl font-bold text-slate-100 mt-1">630 h</p>
+                    <span class="text-[10px] text-slate-500">15 W × 42h/W</span>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                    <span class="text-xs text-slate-400 font-medium">Klausurphase</span>
+                    <p class="text-xl font-bold text-indigo-400 mt-1">240 h</p>
+                    <span class="text-[10px] text-slate-500">Puffer für Prüfungen</span>
+                </div>
+            </div>
+
+            <!-- Semester Progress Bar -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-2">
+                <div class="flex justify-between text-xs">
+                    <span class="text-slate-400">Fortschritt Gesamtes Semester (870h)</span>
+                    <span id="semProgressBarLabel" class="font-bold text-slate-200">0%</span>
+                </div>
+                <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
+                    <div id="semProgressBar"
+                        class="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500"
+                        style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Chart 1: Modulverteilung -->
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-2">
+                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Verteilung nach Modulen
+                    </h4>
+                    <div class="h-52 relative flex items-center justify-center">
+                        <canvas id="chartModules"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Kategorieverteilung -->
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-2">
+                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Verteilung nach Kategorie
+                    </h4>
+                    <div class="h-52 relative flex items-center justify-center">
+                        <canvas id="chartCategories"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- TAB 4: HISTORIE & LOGS -->
+        <section id="tab-history" class="tab-content hidden space-y-4">
+
+            <!-- Filters -->
+            <div class="flex flex-col sm:flex-row gap-2">
+                <div class="flex-1 relative">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-slate-500"></i>
+                    <input type="text" id="historySearch" oninput="renderHistory()" placeholder="In Notizen suchen..."
+                        class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                </div>
+
+                <select id="historyModuleFilter" onchange="renderHistory()"
+                    class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                    <option value="ALL">Alle Module</option>
+                    <!-- Module Options -->
+                </select>
+            </div>
+
+            <!-- History List -->
+            <div id="historyList" class="space-y-2">
+                <!-- Entries rendered via JS -->
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- BOTTOM NAVIGATION (MOBILE APPLIKE) -->
+    <nav
+        class="fixed bottom-0 left-0 right-0 z-30 bg-slate-900/95 backdrop-blur border-t border-slate-800 px-2 py-1.5 pb-safe">
+        <div class="max-w-md mx-auto grid grid-cols-4 gap-1">
+            <button onclick="switchTab('quicktrack')" id="nav-quicktrack"
+                class="nav-btn flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-blue-500 transition-colors">
+                <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium mt-1">Eintragen</span>
+            </button>
+
+            <button onclick="switchTab('weekly')" id="nav-weekly"
+                class="nav-btn flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-slate-400 hover:text-slate-200 transition-colors">
+                <i data-lucide="calendar-days" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium mt-1">Woche</span>
+            </button>
+
+            <button onclick="switchTab('semester')" id="nav-semester"
+                class="nav-btn flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-slate-400 hover:text-slate-200 transition-colors">
+                <i data-lucide="pie-chart" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium mt-1">Statistik</span>
+            </button>
+
+            <button onclick="switchTab('history')" id="nav-history"
+                class="nav-btn flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-slate-400 hover:text-slate-200 transition-colors">
+                <i data-lucide="list" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium mt-1">Verlauf</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- MODAL: DATA BACKUP / EXPORT -->
+    <div id="backupModal"
+        class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-5">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-lg text-slate-100 flex items-center space-x-2">
+                    <i data-lucide="database" class="w-5 h-5 text-blue-500"></i>
+                    <span>Daten & Backup</span>
+                </h3>
+                <button onclick="closeModal('backupModal')" class="p-1 rounded-lg hover:bg-slate-800 text-slate-400">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <button onclick="exportCSV()"
+                    class="w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-medium text-sm flex items-center justify-between transition-colors">
+                    <span>CSV-Datei exportieren (Excel/Sheets)</span>
+                    <i data-lucide="download" class="w-4 h-4 text-blue-400"></i>
+                </button>
+
+                <button onclick="exportJSON()"
+                    class="w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-medium text-sm flex items-center justify-between transition-colors">
+                    <span>JSON-Backup herunterladen</span>
+                    <i data-lucide="file-json" class="w-4 h-4 text-indigo-400"></i>
+                </button>
+
+                <div class="border-t border-slate-800 pt-3">
+                    <label class="block text-xs text-slate-400 mb-2">JSON-Backup wiederherstellen:</label>
+                    <input type="file" id="importJsonInput" accept=".json" onchange="importJSON(event)"
+                        class="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer">
+                </div>
+            </div>
+
+            <div class="border-t border-slate-800 pt-3">
+                <button onclick="resetData()"
+                    class="w-full py-2.5 px-4 bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-800/50 rounded-xl font-medium text-xs transition-colors">
+                    Alle Daten zurücksetzen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="fixed top-16 right-4 z-50 space-y-2 pointer-events-none"></div>
+
+    <!-- APPLICATION LOGIC -->
+    <script src="script.js"></script>
+</body>
+
+</html>
